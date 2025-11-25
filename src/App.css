@@ -37,10 +37,10 @@
 .sidebar {
   width: 260px; /* fixed rail width */
   flex: 0 0 260px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  color: #fff;
-  padding: 20px 16px;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  border-right: 1px solid var(--border);
   align-self: stretch;
   display: flex;
   flex-direction: column;
@@ -362,7 +362,7 @@
   flex-direction: column;
 }
 .tabs-left {
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  border-right: 1px solid var(--border);
 }
 .tabs-left .nav-item {
   width: 100%;
@@ -371,18 +371,18 @@
   border-radius: 0;
   border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--muted);
   font-weight: 600;
   padding: 14px 10px;
   text-align: left;
   background: transparent;
 }
 .tabs-left .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text);
 }
 .tabs-left .nav-link.active {
-  background: var(--panel);
+  background: var(--panel-strong);
   color: var(--accent-strong);
   border-left: 4px solid var(--accent);
   border-bottom-color: transparent;
