@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import uuid
 from dotenv import load_dotenv, find_dotenv
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from jsonschema.exceptions import ValidationError
@@ -27,14 +27,36 @@ if _env_path:
             load_dotenv(_env_path, override=False, encoding="utf-16")
 
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+# admin bootstrap from env so creds live in .env
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip() or "admin"
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_DISPLAY_NAME = os.getenv("ADMIN_DISPLAY_NAME", "Administrator")
+ADMIN_ROLES = [
+    r.strip()
+    for r in (os.getenv("ADMIN_ROLES", "admin,user") or "admin,user").split(",")
+    if r.strip()
+]
+# also allow the 127.0.0.1 alias to avoid CORS surprises in CRA dev
+_frontend_origins = {FRONTEND_ORIGIN}
+if "localhost" in FRONTEND_ORIGIN:
+    _frontend_origins.add(FRONTEND_ORIGIN.replace("localhost", "127.0.0.1"))
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
 SUPPORTED_EXT = {".pdf", ".docx", ".txt"}
+# simple in-memory user/session store
+USERS = {
+    ADMIN_USERNAME: {
+        "password": ADMIN_PASSWORD,
+        "roles": ADMIN_ROLES,
+        "display_name": ADMIN_DISPLAY_NAME,
+    }
+}
+SESSIONS = {}
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=sorted(_frontend_origins),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,6 +69,55 @@ ensure_storage_tree()
 def _ext_ok(filename: str) -> bool:
     _, ext = os.path.splitext((filename or "").lower())
     return ext in SUPPORTED_EXT
+
+
+def _auth_from_header(req: Request) -> str:
+    auth = req.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip()
+    return ""
+
+
+def _serialize_user(username: str, rec: dict) -> dict:
+    return {
+        "username": username,
+        "roles": rec.get("roles") or [],
+        "display_name": rec.get("display_name") or "",
+    }
+
+
+def _require_auth(req: Request) -> tuple[str, dict]:
+    token = _auth_from_header(req)
+    if not token or token not in SESSIONS:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    username = SESSIONS[token]
+    rec = USERS.get(username)
+    if not rec:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return username, rec
+
+
+def _require_admin(req: Request) -> tuple[str, dict]:
+    username, rec = _require_auth(req)
+    if "admin" not in (rec.get("roles") or []):
+        raise HTTPException(status_code=403, detail="Admin required")
+    return username, rec
+
+
+def _admin_count(exclude: str | None = None) -> int:
+    return sum(
+        1
+        for u, r in USERS.items()
+        if u != exclude and "admin" in (r.get("roles") or [])
+    )
+
+
+def _update_session_usernames(old_username: str, new_username: str):
+    if old_username == new_username:
+        return
+    for tok, uname in list(SESSIONS.items()):
+        if uname == old_username:
+            SESSIONS[tok] = new_username
 
 
 @app.get("/health")
@@ -197,3 +268,125 @@ def kpi_ask(body: AskBody):
 @app.get("/")
 def root():
     return {"ok": True}
+
+
+# ---------- AUTH & USER MANAGEMENT ----------
+class LoginBody(BaseModel):
+    username: str
+    password: str
+
+
+class CreateUserBody(BaseModel):
+    username: str
+    password: str
+    display_name: str | None = None
+    roles: list[str] | None = None
+
+
+class UpdateUserBody(BaseModel):
+    new_username: str | None = None
+    password: str | None = None
+    display_name: str | None = None
+    roles: list[str] | None = None
+
+
+class UpdateSelfBody(BaseModel):
+    password: str | None = None
+    display_name: str | None = None
+
+
+@app.post("/login")
+def login(body: LoginBody):
+    rec = USERS.get(body.username)
+    if not rec or rec.get("password") != body.password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = str(uuid.uuid4())
+    SESSIONS[token] = body.username
+    return {"token": token, "user": _serialize_user(body.username, rec)}
+
+
+@app.get("/users")
+def list_users(req: Request):
+    _require_admin(req)
+    return [
+        _serialize_user(u, r)
+        for u, r in sorted(USERS.items(), key=lambda x: x[0].lower())
+    ]
+
+
+@app.post("/users")
+def create_user(body: CreateUserBody, req: Request):
+    _require_admin(req)
+    if body.username in USERS:
+        raise HTTPException(status_code=409, detail="User already exists")
+    roles = body.roles or ["user"]
+    USERS[body.username] = {
+        "password": body.password,
+        "roles": roles,
+        "display_name": body.display_name or "",
+    }
+    return _serialize_user(body.username, USERS[body.username])
+
+
+@app.patch("/users/{username}")
+def update_user(username: str, body: UpdateUserBody, req: Request):
+    _require_admin(req)
+    rec = USERS.get(username)
+    if not rec:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # handle username change
+    new_username = body.new_username or username
+    if new_username != username and new_username in USERS:
+        raise HTTPException(status_code=409, detail="Username already taken")
+
+    # roles update with admin safety
+    new_roles = body.roles if body.roles is not None else rec.get("roles") or []
+    if "admin" not in new_roles and "admin" in (rec.get("roles") or []):
+        # ensure at least one admin remains
+        if _admin_count(exclude=username) == 0:
+            raise HTTPException(status_code=400, detail="Cannot remove last admin")
+
+    updated = {
+        "password": body.password if body.password is not None else rec.get("password"),
+        "roles": new_roles,
+        "display_name": body.display_name if body.display_name is not None else rec.get("display_name", ""),
+    }
+
+    # apply rename if needed
+    if new_username != username:
+        del USERS[username]
+        USERS[new_username] = updated
+        _update_session_usernames(username, new_username)
+        username = new_username
+    else:
+        USERS[username] = updated
+
+    return _serialize_user(username, USERS[username])
+
+
+@app.delete("/users/{username}")
+def delete_user(username: str, req: Request):
+    _require_admin(req)
+    rec = USERS.get(username)
+    if not rec:
+        raise HTTPException(status_code=404, detail="User not found")
+    if "admin" in (rec.get("roles") or []) and _admin_count(exclude=username) == 0:
+        raise HTTPException(status_code=400, detail="Cannot delete last admin")
+    del USERS[username]
+    # remove sessions for this user
+    for tok, uname in list(SESSIONS.items()):
+        if uname == username:
+            del SESSIONS[tok]
+    return {"ok": True}
+
+
+@app.patch("/users/me")
+def update_self(body: UpdateSelfBody, req: Request):
+    username, rec = _require_auth(req)
+    if body.password is not None:
+        rec["password"] = body.password
+    if body.display_name is not None:
+        rec["display_name"] = body.display_name
+    USERS[username] = rec
+    return _serialize_user(username, rec)

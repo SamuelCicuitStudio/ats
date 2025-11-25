@@ -58,7 +58,7 @@ export default function ChatFab() {
           <div className="chat-head">
             <b>KPI Chat</b>
             <label className="upload-btn">
-              📄 Upload PDF
+              Upload PDF
               <input
                 type="file"
                 accept="application/pdf"

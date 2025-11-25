@@ -1,29 +1,55 @@
 // src/services/api.js
+// CRA uses REACT_APP_* env vars; fallback to localhost backend.
 const API_BASE =
-  import.meta?.env?.VITE_BACKEND_URL?.trim() ||
-  process.env.REACT_APP_API_BASE?.trim() ||
-  "http://127.0.0.1:8000";
+  process.env.REACT_APP_API_BASE?.trim() || "http://127.0.0.1:8000";
 
-async function postFile(path, file, fieldName = "file") {
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function postFile(path, file, fieldName = "file", token) {
   const fd = new FormData();
   fd.append(fieldName, file);
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: fd });
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: fd,
+    headers: authHeaders(token),
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-async function postJson(path, body) {
+async function postJson(path, body, token) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify(body || {}),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-async function getJson(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+async function patchJson(path, body, token) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(body || {}),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function getJson(path, token) {
+  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function del(path, token) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -43,4 +69,13 @@ export const api = {
   kpiLoad: (file) => postFile("/kpi/load", file),
   kpiAsk: (session_id, question) =>
     postJson("/kpi/ask", { session_id, question }),
+  // auth & users
+  login: (username, password) => postJson("/login", { username, password }),
+  listUsers: (token) => getJson("/users", token),
+  createUser: (token, payload) => postJson("/users", payload, token),
+  updateUser: (token, username, payload) =>
+    patchJson(`/users/${encodeURIComponent(username)}`, payload, token),
+  deleteUser: (token, username) =>
+    del(`/users/${encodeURIComponent(username)}`, token),
+  updateSelf: (token, payload) => patchJson("/users/me", payload, token),
 };

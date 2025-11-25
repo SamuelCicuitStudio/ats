@@ -76,13 +76,13 @@ export default function Pipeline({ onStoreHistory }) {
         <div className="result">
           <h3>Match Result</h3>
           <div>
-            <b>Candidate:</b> {result.candidate_name || "—"}
+            <b>Candidate:</b> {result.candidate_name || "-"}
           </div>
           <div>
-            <b>CV Title:</b> {result.cv_title || "—"}
+            <b>CV Title:</b> {result.cv_title || "-"}
           </div>
           <div>
-            <b>JD Title:</b> {result.jd_title || "—"}
+            <b>JD Title:</b> {result.jd_title || "-"}
           </div>
           <table className="scores">
             <tbody>

@@ -9,7 +9,7 @@ export default function History({ items }) {
       <ul className="history">
         {items.map((it, i) => (
           <li key={i}>
-            <b>{it.type}</b> â€” {new Date(it.at).toLocaleString()}
+            <b>{it.type}</b> — {new Date(it.at).toLocaleString()}
           </li>
         ))}
       </ul>
