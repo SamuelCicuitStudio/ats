@@ -35,6 +35,7 @@ except Exception:
 # --------- Config / constants ----------
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
 OLLAMA_MODEL_TEST = os.getenv("OLLAMA_MODEL_TEST", "mistral")
+OLLAMA_MAX_TOKENS = int(os.getenv("OLLAMA_MAX_TOKENS", "3000"))
 
 # Minimal EN/FR stopword set (enough for JD keyword fallback, no extra deps)
 _STOPWORDS = {
@@ -91,7 +92,7 @@ def _extract_seed_skills(jd: Dict[str, Any], k: int = 10) -> List[str]:
     Primary: jd['skills'] (already normalized by JD parser).
     Fallback: simple term-frequency on jd['jd_text'] with stopwords removed (no sklearn dependency).
     """
-    skills = jd.get("skills") or []
+    skills = jd.get("skills") or jd.get("competences") or []
     if isinstance(skills, list) and skills:
         return _dedup_lower_keep_order(skills)[:k]
 
@@ -134,7 +135,7 @@ def _ollama_generate_questions(role_title: str, company: str, seed_skills: List[
         "system": system,
         "prompt": user,
         "format": "json",
-        "options": {"temperature": 0.0, "top_p": 1.0},
+        "options": {"temperature": 0.0, "top_p": 1.0, "num_predict": OLLAMA_MAX_TOKENS},
         "stream": False,
     }
 

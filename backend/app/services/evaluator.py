@@ -1,16 +1,9 @@
 # app/services/evaluator.py
 """
-Parsing Evaluator
-- Compares parsed fields against the original raw_text using semantic similarity
-  with Sentence-Transformers (all-MiniLM-L6-v2 by default).
-- Returns per-field scores, weights, statuses + a global score/status.
-- Never mutates the provided parsed_json.
-
-Spec:
-  - Fields (CV): name, title, skills, experience (avg over entries), education, certifications
-  - Fields (JD): title, skills, certifications, experience_years
-  - Thresholds: excellent ≥ 0.85, good ≥ 0.70, else bad
-  - Global score: weighted mean of available fields
+Parsing Evaluator base sur refcv/refjob generalises.
+- Compare les champs extraits au texte brut via similarite semantique
+  (Sentence-Transformers all-MiniLM-L6-v2 par defaut).
+- Retourne des scores par champ et un score global, sans muter parsed_json.
 """
 
 from __future__ import annotations
@@ -39,9 +32,8 @@ CV_WEIGHTS: Dict[str, float] = {
 
 JD_WEIGHTS: Dict[str, float] = {
     "title": 1.2,
-    "skills": 1.5,
-    "certifications": 0.7,
-    "experience_years": 0.6,
+    "company": 0.8,
+    "skills": 1.0,
 }
 
 EXCELLENT_TH = 0.85
@@ -101,55 +93,45 @@ def _truncate_context(raw_text: str, max_chars: int = 15_000) -> str:
 # --------------- Field builders ---------------
 def _cv_field_strings(parsed: Dict[str, Any]) -> Dict[str, List[str]]:
     """
-    Build per-field strings for CV evaluation.
-    For fields like 'experience' we return a list to average per-entry similarity.
+    Build per-field strings for CV evaluation (refcv schema).
     """
     out: Dict[str, List[str]] = {}
-    basics = (parsed.get("profile") or {}).get("basics") or {}
 
-    # name
-    fn = _normspace(basics.get("first_name", ""))
-    ln = _normspace(basics.get("last_name", ""))
+    fn = _normspace(parsed.get("prenom", ""))
+    ln = _normspace(parsed.get("nom", ""))
     name = _normspace(f"{fn} {ln}".strip())
     if name:
         out["name"] = [name]
 
-    # title
-    title = _normspace(basics.get("current_title", ""))
+    title = _normspace(parsed.get("poste_actuel", "") or parsed.get("profil", ""))
     if title:
         out["title"] = [title]
 
-    # skills
-    skills = parsed.get("skills") or []
+    skills = parsed.get("competences") or []
     if isinstance(skills, list) and skills:
-        # lower, dedupe, alphabetical for stability
         joined = ", ".join(sorted({_normspace(s).lower() for s in skills if _normspace(s)}))
         if joined:
             out["skills"] = [joined]
 
-    # experience (avg across entries)
-    exps: List[str] = []
-    for e in (parsed.get("experience") or []):
-        t = _normspace(e.get("title", ""))
-        c = _normspace(e.get("company", ""))
-        s = _normspace(f"{t} {c}".strip())
-        if len(s) >= 3:
-            exps.append(s)
-    if exps:
-        out["experience"] = exps
+    try:
+        exp_val = float(parsed.get("annees_experience", 0))
+        if exp_val > 0:
+            out["experience"] = [str(exp_val)]
+    except Exception:
+        pass
 
-    # education (single joined string)
     eds: List[str] = []
-    for d in (parsed.get("education") or []):
-        deg = _normspace(d.get("degree", ""))
-        sch = _normspace(d.get("school", ""))
-        s = _normspace(f"{deg} {sch}".strip())
+    for d in (parsed.get("diplomes") or []):
+        s = _normspace(d)
+        if len(s) >= 3:
+            eds.append(s)
+    for e in (parsed.get("ecoles") or []):
+        s = _normspace(e)
         if len(s) >= 3:
             eds.append(s)
     if eds:
         out["education"] = [", ".join(eds)]
 
-    # certifications
     certs = parsed.get("certifications") or []
     if isinstance(certs, list) and certs:
         joined = ", ".join(sorted({_normspace(c) for c in certs if _normspace(c)}))
@@ -161,39 +143,24 @@ def _cv_field_strings(parsed: Dict[str, Any]) -> Dict[str, List[str]]:
 
 def _jd_field_strings(parsed: Dict[str, Any]) -> Dict[str, List[str]]:
     """
-    Build per-field strings for JD evaluation.
+    Build per-field strings for JD evaluation (refjob schema).
     """
     out: Dict[str, List[str]] = {}
     basics = (parsed.get("job_profile") or {}).get("basics") or {}
 
-    # title
     title = _normspace(basics.get("title", ""))
     if title:
         out["title"] = [title]
 
-    # skills
-    skills = parsed.get("skills") or []
+    company = _normspace(basics.get("company", ""))
+    if company:
+        out["company"] = [company]
+
+    skills = parsed.get("skills") or parsed.get("competences") or []
     if isinstance(skills, list) and skills:
         joined = ", ".join(sorted({_normspace(s).lower() for s in skills if _normspace(s)}))
         if joined:
             out["skills"] = [joined]
-
-    # certifications
-    certs = parsed.get("required_certifications") or []
-    if isinstance(certs, list) and certs:
-        joined = ", ".join(sorted({_normspace(c) for c in certs if _normspace(c)}))
-        if joined:
-            out["certifications"] = [joined]
-
-    # experience_years
-    yrs = parsed.get("experience_required_years")
-    if yrs is not None:
-        try:
-            yrs_int = int(yrs)
-            if yrs_int >= 0:
-                out["experience_years"] = [str(yrs_int)]
-        except Exception:
-            pass
 
     return out
 
@@ -216,7 +183,6 @@ def _score_fields(
         if not strings:
             continue
 
-        # Average similarity over list (e.g., multiple experience entries)
         sims: List[float] = []
         for s in strings:
             v = _embed(s)
@@ -241,17 +207,7 @@ def _score_fields(
 
 def evaluate_parsing(kind: str, parsed_json: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
     """
-    Evaluate parsing quality.
-    Args:
-        kind: "cv" or "jd"
-        parsed_json: normalized JSON from the parser
-        raw_text: exact extracted text (pre-truncation)
-    Returns:
-        {
-          "field_scores": { "<field>": { "score": float, "weight": float, "status": "excellent|good|bad" }, ... },
-          "global_score": float,
-          "global_status": "excellent|good|bad"
-        }
+    Evaluate parsing quality for CV or JD.
     """
     ctx = _truncate_context(raw_text or "", 15_000)
     ctx_vec = _embed(ctx)
@@ -271,3 +227,10 @@ def evaluate_parsing(kind: str, parsed_json: Dict[str, Any], raw_text: str) -> D
         "global_score": round(global_score, 4),
         "global_status": global_status,
     }
+
+
+def evaluate(parsed_json: Dict[str, Any], raw_text: str, kind: str) -> Dict[str, Any]:
+    """
+    Alias attendu par le reste de l'application.
+    """
+    return evaluate_parsing(kind=kind, parsed_json=parsed_json, raw_text=raw_text)

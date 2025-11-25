@@ -21,12 +21,10 @@ export default function UploadBox({ label, onFile }) {
     e.preventDefault();
     setDragging(true);
   }
-
   function onDragLeave(e) {
     e.preventDefault();
     setDragging(false);
   }
-
   function onDrop(e) {
     e.preventDefault();
     setDragging(false);
@@ -36,19 +34,29 @@ export default function UploadBox({ label, onFile }) {
 
   return (
     <div
-      className={`uploadbox ${dragging ? "dragging" : ""}`}
+      className={`uploadbox card bg-panel border-soft shadow-1 ${
+        dragging ? "dragging" : ""
+      }`}
       onDragOver={onDragOver}
       onDragEnter={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       onClick={() => ref.current?.click()}
+      role="button"
     >
-      <div className="uplabel">{label}</div>
-      <div className="drophint">
-        Drop a file here or <span className="browse">browse</span>
+      <div className="card-body text-center">
+        <div className="uplabel text-muted fw-semibold mb-1">{label}</div>
+        <div className="drophint small">
+          Drag & drop or{" "}
+          <span className="browse text-primary fw-bold">browse</span>
+        </div>
+        {name && (
+          <div className="filename mt-2 text-secondary small">
+            Selected: {name}
+          </div>
+        )}
+        <input ref={ref} type="file" onChange={change} hidden />
       </div>
-      {name && <div className="filename">Selected: {name}</div>}
-      <input ref={ref} type="file" onChange={change} hidden />
     </div>
   );
 }

@@ -47,23 +47,31 @@ export default function TestGen({ onStoreHistory }) {
   }
 
   return (
-    <div className="panel">
-      <UploadBox label="Upload JD for test generation" onFile={handleJD} />
-      <button className="primary" onClick={generate} disabled={busy}>
-        Generate Questions
-      </button>
-      {err && <div className="error">{err}</div>}
+    <div className="panel card bg-panel border-soft shadow-1 p-4">
+      <div className="d-flex flex-column gap-3">
+        <UploadBox label="Upload JD for test generation" onFile={handleJD} />
+        <button
+          className="btn btn-primary"
+          onClick={generate}
+          disabled={busy}
+        >
+          {busy ? "Generating..." : "Generate Questions"}
+        </button>
+        {err && <div className="alert alert-danger mb-0 py-2">{err}</div>}
 
-      {questions.length > 0 && (
-        <div className="result">
-          <h3>Questions</h3>
-          <ol>
-            {questions.map((q, i) => (
-              <li key={i}>{q.question}</li>
-            ))}
-          </ol>
-        </div>
-      )}
+        {questions.length > 0 && (
+          <div className="result card bg-dark-subtle border-0 mt-2">
+            <div className="card-body">
+              <h3 className="h5 mb-3">Questions</h3>
+              <ol className="mb-0">
+                {questions.map((q, i) => (
+                  <li key={i}>{q.question}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

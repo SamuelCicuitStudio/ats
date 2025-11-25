@@ -1,43 +1,51 @@
 # app/services/matcher.py
 """
-Matching Engine
-- Computes component scores (title, skills, certifications, experience, location)
-  and a global score for CV vs JD using SBERT embeddings (same model as evaluator).
-- Deterministic: no randomness, same inputs → same outputs.
-
-Weights default (can be overridden per request):
-  { "title":0.25, "skills":0.25, "certifications":0.15, "experience":0.20, "location":0.05 }
+Matching Engine adapte au schema refcv/refjob generalise.
+- Compare titre, competences, certifications, experience et localisation.
+- Utilise les embeddings Sentence-Transformers (meme loader que l'evaluator).
 """
 
 from __future__ import annotations
-import math
+
 import re
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime
+from typing import Dict, Any, List, Optional
 
 import numpy as np
-from dateutil import parser as dateparse
 
-# Reuse the same model loader used by the evaluator
-from app.services.evaluator import _get_model  # uses SENTENCE_TRANSFORMERS_MODEL
+from app.services.evaluator import _get_model  # reuse the shared SBERT loader
 
 DEFAULT_WEIGHTS = {
     "title": 0.25,
-    "skills": 0.25,
-    "certifications": 0.15,
-    "experience": 0.20,
-    "location": 0.05,
+    "skills": 0.30,
+    "certifications": 0.10,
+    "experience": 0.25,
+    "location": 0.10,
 }
 
-# ---------- small utils ----------
+_STOPWORDS = {
+    # english
+    "a", "an", "and", "the", "or", "of", "for", "with", "in", "to", "on", "by", "at", "from", "as", "is", "are",
+    "be", "being", "been", "this", "that", "these", "those", "it", "its", "we", "you", "they", "their", "our", "your",
+    "i", "he", "she", "them", "his", "her", "ours", "yours", "will", "can", "should", "may", "must", "might", "not",
+    "no", "yes", "but", "if", "else", "than", "then", "so", "such", "per", "job", "role", "position", "requirements",
+    "responsibilities", "skills", "experience", "years", "year",
+    # french (basic subset)
+    "le", "la", "les", "un", "une", "des", "du", "de", "d", "et", "ou", "dans", "au", "aux", "par", "pour", "avec",
+    "sur", "en", "est", "sont", "etre", "ayant", "avoir", "sans", "plus", "moins", "ainsi", "dont", "que", "qui",
+    "quoi", "poste", "role", "exigences", "responsabilites", "competences", "experience", "ans", "annee", "annees",
+}
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
+
+
 def _normspace(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "")).strip()
+
 
 def _lower_dedup(items: Optional[List[str]]) -> List[str]:
     if not items:
         return []
     seen = set()
-    out = []
+    out: List[str] = []
     for x in items:
         v = _normspace(x).lower()
         if v and v not in seen:
@@ -45,42 +53,49 @@ def _lower_dedup(items: Optional[List[str]]) -> List[str]:
             out.append(v)
     return out
 
+
+def _extract_keywords(text: str, k: int = 12) -> List[str]:
+    freqs: Dict[str, int] = {}
+    for tok in _TOKEN_RE.findall(_normspace(text)):
+        t = tok.lower()
+        if len(t) < 3 or t in _STOPWORDS:
+            continue
+        freqs[t] = freqs.get(t, 0) + 1
+    ranked = sorted(freqs.items(), key=lambda kv: (-kv[1], kv[0]))
+    return [w for w, _ in ranked[:k]]
+
+
 def _embed(texts: List[str]) -> np.ndarray:
-    """
-    Encode 1 or many strings with normalized embeddings.
-    Returns array shape (n, d). If n == 1, still (1, d).
-    """
     m = _get_model()
     return m.encode(texts, normalize_embeddings=True)
 
-def _cos(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    # both should already be L2-normalized
-    return float(np.dot(vec_a, vec_b))
+
+def _cos(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.dot(a, b))
+
 
 def _mean_pool(vectors: np.ndarray) -> np.ndarray:
-    """
-    vectors: (n, d) of unit vectors → mean + renormalize to unit length
-    """
     if vectors.size == 0:
         raise ValueError("Empty vectors array.")
     mean = vectors.mean(axis=0)
     nrm = np.linalg.norm(mean)
-    if nrm == 0:
-        return mean
-    return mean / nrm
+    return mean if nrm == 0 else mean / nrm
 
-# ---------- component scorers ----------
+
 def _title_similarity(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float:
-    cv_title = _normspace(((cv_json.get("profile") or {}).get("basics") or {}).get("current_title", ""))
+    cv_title = _normspace(cv_json.get("poste_actuel", "") or cv_json.get("profil", ""))
     jd_title = _normspace(((jd_json.get("job_profile") or {}).get("basics") or {}).get("title", ""))
     if not cv_title or not jd_title:
         return 0.0
     em = _embed([cv_title, jd_title])
     return _cos(em[0], em[1])
 
+
 def _skills_similarity(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float:
-    cv_sk = _lower_dedup(cv_json.get("skills"))
-    jd_sk = _lower_dedup(jd_json.get("skills"))
+    cv_sk = _lower_dedup(cv_json.get("competences"))
+    jd_sk = _lower_dedup(jd_json.get("competences") or jd_json.get("skills"))
+    if not jd_sk:
+        jd_sk = _extract_keywords(jd_json.get("jd_text", ""), k=12)
     if not cv_sk or not jd_sk:
         return 0.0
     em_cv = _embed(cv_sk)
@@ -89,9 +104,12 @@ def _skills_similarity(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> floa
     jd_mean = _mean_pool(em_jd)
     return _cos(cv_mean, jd_mean)
 
+
 def _certs_similarity(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float:
     cv_c = _lower_dedup(cv_json.get("certifications"))
     jd_c = _lower_dedup(jd_json.get("required_certifications"))
+    if not jd_c:
+        jd_c = _extract_keywords(jd_json.get("jd_text", ""), k=6)
     if not cv_c or not jd_c:
         return 0.0
     em_cv = _embed(cv_c)
@@ -100,65 +118,33 @@ def _certs_similarity(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float
     jd_mean = _mean_pool(em_jd)
     return _cos(cv_mean, jd_mean)
 
-def _to_date_or_none(s: Optional[str]) -> Optional[datetime]:
-    if not s:
-        return None
-    try:
-        return dateparse.parse(s)
-    except Exception:
-        return None
-
-def _cv_experience_years(cv_json: Dict[str, Any]) -> float:
-    total_months = 0
-    today = datetime.utcnow()
-    for e in (cv_json.get("experience") or []):
-        # prefer pre-computed duration_months if present
-        dm = e.get("duration_months")
-        if isinstance(dm, int) and dm >= 0:
-            total_months += dm
-            continue
-        # else compute from dates
-        s = _to_date_or_none(e.get("start_date"))
-        e_ = _to_date_or_none(e.get("end_date")) or today
-        if s:
-            months = (e_.year - s.year) * 12 + (e_.month - s.month)
-            if months > 0:
-                total_months += months
-    yrs = total_months / 12.0
-    # clamp sane range
-    return max(0.0, min(40.0, yrs))
 
 def _experience_score(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float:
-    cv_years = _cv_experience_years(cv_json)
-    jd_req = jd_json.get("experience_required_years")
     try:
-        jd_years = float(jd_req) if jd_req is not None else 0.0
+        cv_years = float(cv_json.get("annees_experience", 0))
     except Exception:
-        jd_years = 0.0
+        cv_years = 0.0
+    try:
+        jd_req = float(jd_json.get("experience_required_years", 0))
+    except Exception:
+        jd_req = 0.0
+    if jd_req <= 0:
+        return 1.0 if cv_years > 0 else 0.0
+    return float(min(cv_years / jd_req, 1.0))
 
-    if jd_years <= 0.0:
-        return 1.0
-    return float(min(cv_years / jd_years, 1.0))
 
 def _location_score(cv_json: Dict[str, Any], jd_json: Dict[str, Any]) -> float:
-    """
-    1.0 if the CV location is a substring of JD text (very simple heuristic).
-    Else 0.0. If either missing, 0.0.
-    """
-    loc = _normspace(((cv_json.get("profile") or {}).get("basics") or {}).get("location", "")).lower()
+    loc = _normspace(cv_json.get("localisation", "")).lower()
     jd_text = _normspace(jd_json.get("jd_text", "")).lower()
-    if not loc or not jd_text:
-        return 0.0
-    # Require at least 3 chars to avoid matching "LA" etc.
-    if len(loc) < 3:
+    if not loc or not jd_text or len(loc) < 3:
         return 0.0
     return 1.0 if loc in jd_text else 0.0
 
-# ---------- public API ----------
+
 def compute_match(
     cv_json: Dict[str, Any],
     jd_json: Dict[str, Any],
-    weights: Optional[Dict[str, float]] = None
+    weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     w = {**DEFAULT_WEIGHTS, **(weights or {})}
 
@@ -170,24 +156,19 @@ def compute_match(
         "location": _location_score(cv_json, jd_json),
     }
 
-    # Weighted sum
-    global_score = (
-        w["title"] * scores["title"]
-        + w["skills"] * scores["skills"]
-        + w["certifications"] * scores["certifications"]
-        + w["experience"] * scores["experience"]
-        + w["location"] * scores["location"]
-    )
+    global_score = sum(w[k] * scores[k] for k in scores)
 
-    # Presentation rounding (keep raw too if you need)
-    result = {
-        "candidate_name": _normspace(
-            f"{((cv_json.get('profile') or {}).get('basics') or {}).get('first_name', '')} "
-            f"{((cv_json.get('profile') or {}).get('basics') or {}).get('last_name', '')}"
-        ),
-        "cv_title": _normspace(((cv_json.get("profile") or {}).get("basics") or {}).get("current_title", "")),
+    return {
+        "candidate_name": _normspace(f"{cv_json.get('prenom', '')} {cv_json.get('nom', '')}"),
+        "cv_title": _normspace(cv_json.get("poste_actuel", "") or cv_json.get("profil", "")),
         "jd_title": _normspace(((jd_json.get("job_profile") or {}).get("basics") or {}).get("title", "")),
         "scores": {k: round(v, 4) for k, v in scores.items()},
         "global_score": round(float(global_score), 4),
     }
-    return result
+
+
+def match(cv_json: Dict[str, Any], jd_json: Dict[str, Any], weights: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+    """
+    Alias attendu par main.py.
+    """
+    return compute_match(cv_json=cv_json, jd_json=jd_json, weights=weights)

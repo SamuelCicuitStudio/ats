@@ -28,12 +28,8 @@ export default function Users({ session, onUserUpdate }) {
   useEffect(() => {
     setSelfName(currentUser?.display_name || "");
   }, [currentUser]);
-
   useEffect(() => {
-    if (isAdmin && token) {
-      loadUsers();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (isAdmin && token) loadUsers(); /* eslint-disable-next-line */
   }, [isAdmin, token]);
 
   async function loadUsers() {
@@ -84,7 +80,12 @@ export default function Users({ session, onUserUpdate }) {
         display_name: newUser.display_name.trim(),
         roles: newUser.roles,
       });
-      setNewUser({ username: "", password: "", display_name: "", roles: ["user"] });
+      setNewUser({
+        username: "",
+        password: "",
+        display_name: "",
+        roles: ["user"],
+      });
       await loadUsers();
     } catch (e) {
       setErr(String(e));
@@ -112,10 +113,7 @@ export default function Users({ session, onUserUpdate }) {
       };
       if (state.password) payload.password = state.password;
       const updated = await api.updateUser(token, username, payload);
-      // if current user was updated, refresh their profile
-      if (currentUser?.username === username) {
-        onUserUpdate?.(updated);
-      }
+      if (currentUser?.username === username) onUserUpdate?.(updated);
       setEditing((prev) => {
         const copy = { ...prev };
         delete copy[username];
@@ -144,180 +142,240 @@ export default function Users({ session, onUserUpdate }) {
   }
 
   return (
-    <div className="panel">
-      <div className="panel">
-        <h3>Your account</h3>
-        <form className="auth-form" onSubmit={saveSelf}>
-          <label className="uplabel">Display name</label>
-          <input
-            value={selfName}
-            onChange={(e) => setSelfName(e.target.value)}
-            placeholder="Your name"
-          />
-
-          <label className="uplabel">New password</label>
-          <input
-            type="password"
-            value={selfPwd}
-            onChange={(e) => setSelfPwd(e.target.value)}
-            placeholder="••••••••"
-          />
-
-          <button className="primary" type="submit" disabled={busy}>
-            Save account
-          </button>
-        </form>
+    <div className="panel card bg-panel border-soft shadow-1 p-4">
+      <div className="card bg-dark-subtle border-0 mb-4">
+        <div className="card-body">
+          <h3 className="h5 mb-3">Your account</h3>
+          <form className="row g-3" onSubmit={saveSelf}>
+            <div className="col-12 col-md-6">
+              <label className="form-label">Display name</label>
+              <input
+                className="form-control"
+                value={selfName}
+                onChange={(e) => setSelfName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div className="col-12 col-md-6">
+              <label className="form-label">New password</label>
+              <input
+                className="form-control"
+                type="password"
+                value={selfPwd}
+                onChange={(e) => setSelfPwd(e.target.value)}
+                placeholder="Set new password"
+              />
+            </div>
+            <div className="col-12">
+              <button className="btn btn-primary" type="submit" disabled={busy}>
+                Save account
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {isAdmin && (
-        <div className="panel">
-          <h3>Users</h3>
+        <div className="card bg-dark-subtle border-0">
+          <div className="card-body">
+            <h3 className="h5 mb-3">Users</h3>
 
-          <form className="auth-form" onSubmit={addUser}>
-            <label className="uplabel">Username</label>
-            <input
-              value={newUser.username}
-              onChange={(e) =>
-                setNewUser((u) => ({ ...u, username: e.target.value }))
-              }
-              placeholder="username"
-              required
-            />
-
-            <label className="uplabel">Password</label>
-            <input
-              type="password"
-              value={newUser.password}
-              onChange={(e) =>
-                setNewUser((u) => ({ ...u, password: e.target.value }))
-              }
-              placeholder="Set a password"
-              required
-            />
-
-            <label className="uplabel">Display name</label>
-            <input
-              value={newUser.display_name}
-              onChange={(e) =>
-                setNewUser((u) => ({ ...u, display_name: e.target.value }))
-              }
-              placeholder="Optional"
-            />
-
-            <div className="chiprow">
-              <label>
+            <form className="row g-3" onSubmit={addUser}>
+              <div className="col-12 col-md-3">
+                <label className="form-label">Username</label>
                 <input
-                  type="checkbox"
-                  checked={newUser.roles.includes("user")}
-                  onChange={() =>
-                    setNewUser((u) => ({
-                      ...u,
-                      roles: toggleRole(u, "user"),
-                    }))
+                  className="form-control"
+                  value={newUser.username}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, username: e.target.value }))
                   }
-                />{" "}
-                user
-              </label>
-              <label>
+                  placeholder="username"
+                  required
+                />
+              </div>
+              <div className="col-12 col-md-3">
+                <label className="form-label">Password</label>
                 <input
-                  type="checkbox"
-                  checked={newUser.roles.includes("admin")}
-                  onChange={() =>
-                    setNewUser((u) => ({
-                      ...u,
-                      roles: toggleRole(u, "admin"),
-                    }))
+                  className="form-control"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, password: e.target.value }))
                   }
-                />{" "}
-                admin
-              </label>
-            </div>
-
-            <button className="primary" type="submit" disabled={busy}>
-              Add user
-            </button>
-          </form>
-
-          <div className="table">
-            <div className="table-head">
-              <span>User</span>
-              <span>Roles</span>
-              <span>Actions</span>
-            </div>
-            {users.map((u) => {
-              const state = editing[u.username] || {
-                new_username: u.username,
-                display_name: u.display_name,
-                roles: u.roles,
-                password: "",
-              };
-              return (
-                <div className="table-row" key={u.username}>
-                  <div className="table-cell">
-                    <input
-                      value={state.new_username}
-                      onChange={(e) =>
-                        onEditField(u.username, "new_username", e.target.value)
-                      }
-                    />
-                    <input
-                      value={state.display_name || ""}
-                      onChange={(e) =>
-                        onEditField(u.username, "display_name", e.target.value)
-                      }
-                      placeholder="Display name"
-                    />
-                  </div>
-                  <div className="table-cell">
-                    <div className="chiprow">
-                      {["user", "admin"].map((r) => (
-                        <label key={r}>
-                          <input
-                            type="checkbox"
-                            checked={(state.roles || []).includes(r)}
-                            onChange={() =>
-                              onEditField(u.username, "roles", toggleRole(state, r))
-                            }
-                          />{" "}
-                          {r}
-                        </label>
-                      ))}
-                    </div>
-                    <input
-                      type="password"
-                      value={state.password || ""}
-                      onChange={(e) =>
-                        onEditField(u.username, "password", e.target.value)
-                      }
-                      placeholder="Set new password"
-                    />
-                  </div>
-                  <div className="table-cell actions">
-                    <button
-                      className="primary ghost"
-                      type="button"
-                      onClick={() => saveUser(u.username)}
-                      disabled={busy}
-                    >
-                      Save
-                    </button>
-                    <button
-                      className="danger ghost"
-                      type="button"
-                      onClick={() => removeUser(u.username)}
-                      disabled={busy}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  placeholder="Set a password"
+                  required
+                />
+              </div>
+              <div className="col-12 col-md-4">
+                <label className="form-label">Display name</label>
+                <input
+                  className="form-control"
+                  value={newUser.display_name}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, display_name: e.target.value }))
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="col-12 col-md-2 d-flex align-items-end gap-3">
+                <div className="form-check me-3">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={newUser.roles.includes("user")}
+                    onChange={() =>
+                      setNewUser((u) => ({
+                        ...u,
+                        roles: toggleRole(u, "user"),
+                      }))
+                    }
+                    id="role-user"
+                  />
+                  <label className="form-check-label ms-1" htmlFor="role-user">
+                    user
+                  </label>
                 </div>
-              );
-            })}
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    checked={newUser.roles.includes("admin")}
+                    onChange={() =>
+                      setNewUser((u) => ({
+                        ...u,
+                        roles: toggleRole(u, "admin"),
+                      }))
+                    }
+                    id="role-admin"
+                  />
+                  <label className="form-check-label ms-1" htmlFor="role-admin">
+                    admin
+                  </label>
+                </div>
+              </div>
+              <div className="col-12">
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={busy}
+                >
+                  Add user
+                </button>
+              </div>
+            </form>
+
+            <div className="table-responsive mt-4">
+              <table className="table table-dark table-striped align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Roles / Password</th>
+                    <th className="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => {
+                    const state = editing[u.username] || {
+                      new_username: u.username,
+                      display_name: u.display_name,
+                      roles: u.roles,
+                      password: "",
+                    };
+                    return (
+                      <tr key={u.username}>
+                        <td style={{ minWidth: 260 }}>
+                          <input
+                            className="form-control mb-2"
+                            value={state.new_username}
+                            onChange={(e) =>
+                              onEditField(
+                                u.username,
+                                "new_username",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <input
+                            className="form-control"
+                            value={state.display_name || ""}
+                            onChange={(e) =>
+                              onEditField(
+                                u.username,
+                                "display_name",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Display name"
+                          />
+                        </td>
+                        <td style={{ minWidth: 280 }}>
+                          <div className="d-flex align-items-center gap-3 mb-2">
+                            {["user", "admin"].map((r) => (
+                            <div className="form-check form-check-inline mb-0" key={r}>
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={(state.roles || []).includes(r)}
+                                onChange={() =>
+                                    onEditField(
+                                      u.username,
+                                      "roles",
+                                      toggleRole(state, r)
+                                    )
+                                  }
+                                  id={`${u.username}-${r}`}
+                                />
+                                <label className="form-check-label ms-1" htmlFor={`${u.username}-${r}`}>
+                                  {r}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                          <input
+                            className="form-control"
+                            type="password"
+                            value={state.password || ""}
+                            onChange={(e) =>
+                              onEditField(
+                                u.username,
+                                "password",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Set new password"
+                          />
+                        </td>
+                        <td className="text-end">
+                          <div className="btn-group">
+                            <button
+                              className="btn btn-outline-primary btn-sm"
+                              type="button"
+                              onClick={() => saveUser(u.username)}
+                              disabled={busy}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="btn btn-outline-danger btn-sm"
+                              type="button"
+                              onClick={() => removeUser(u.username)}
+                              disabled={busy}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {err && <div className="error">{err}</div>}
+      {err && <div className="alert alert-danger mt-3 mb-0 py-2">{err}</div>}
     </div>
   );
 }

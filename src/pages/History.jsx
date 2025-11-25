@@ -3,16 +3,24 @@ import React from "react";
 
 export default function History({ items }) {
   if (!items || items.length === 0)
-    return <div className="panel">No history yet.</div>;
+    return (
+      <div className="panel card bg-panel border-soft shadow-1 p-4">
+        No history yet.
+      </div>
+    );
   return (
-    <div className="panel">
-      <ul className="history">
+    <div className="panel card bg-panel border-soft shadow-1 p-4">
+      <div className="history list-group list-group-flush">
         {items.map((it, i) => (
-          <li key={i}>
-            <b>{it.type}</b> — {new Date(it.at).toLocaleString()}
-          </li>
+          <div
+            key={i}
+            className="list-group-item bg-transparent border-0 px-0 text-white"
+          >
+            <b className="text-uppercase">{it.type}</b> â€”{" "}
+            {new Date(it.at).toLocaleString()}
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

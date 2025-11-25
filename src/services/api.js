@@ -15,7 +15,10 @@ async function postFile(path, file, fieldName = "file", token) {
     body: fd,
     headers: authHeaders(token),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const msg = await extractError(res);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -25,7 +28,10 @@ async function postJson(path, body, token) {
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify(body || {}),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const msg = await extractError(res);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -35,13 +41,19 @@ async function patchJson(path, body, token) {
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify(body || {}),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const msg = await extractError(res);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
 async function getJson(path, token) {
   const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders(token) });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const msg = await extractError(res);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -50,8 +62,23 @@ async function del(path, token) {
     method: "DELETE",
     headers: authHeaders(token),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const msg = await extractError(res);
+    throw new Error(msg);
+  }
   return res.json();
+}
+
+// Normalize backend error payloads (JSON with .detail) to a readable string.
+async function extractError(res) {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    if (data && typeof data.detail === "string") return data.detail;
+  } catch (_) {
+    // ignore parse errors; fallback to raw text
+  }
+  return text || `HTTP ${res.status}`;
 }
 
 export const api = {
