@@ -1,38 +1,166 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.app {
+  min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+.app-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+}
+.app-main {
+  padding: 16px;
+  flex: 1;
+}
+
+.tabnav {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #333;
+}
+.tabbtn {
+  padding: 8px 12px;
+  border: 1px solid #555;
+  background: #222;
+  color: #eee;
+  border-radius: 6px;
+}
+.tabbtn.active {
+  background: #3a6ff7;
+  border-color: #3a6ff7;
+}
+
+.panel {
+  display: grid;
+  gap: 12px;
+}
+.row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.uploadbox {
+  border: 1px dashed #555;
+  padding: 12px;
+  border-radius: 8px;
+  min-width: 260px;
+}
+.uplabel {
+  display: block;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+.filename {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.primary {
+  width: max-content;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #3a6ff7;
+  background: #3a6ff7;
+  color: #fff;
+}
+.error {
+  color: #ff6b6b;
+}
+
+.result {
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+}
+.scores td {
+  padding: 4px 8px;
+}
+
+.history {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #3a6ff7;
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.chat {
+  position: fixed;
+  right: 20px;
+  bottom: 90px;
+  width: 360px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.chat-head {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
 }
-
-.App-link {
-  color: #61dafb;
+.upload-btn {
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
 }
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.chat-body {
+  padding: 8px 10px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  max-height: 52vh;
+}
+.msg {
+  padding: 8px 10px;
+  border-radius: 8px;
+  max-width: 90%;
+}
+.msg.user {
+  background: #1e293b;
+  margin-left: auto;
+}
+.msg.assistant {
+  background: #0f172a;
+  margin-right: auto;
+}
+.chat-foot {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid #333;
+}
+.chat-foot input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #0b0b0b;
+  color: #eee;
+}
+.chat-foot button {
+  padding: 8px 10px;
+  border: 1px solid #3a6ff7;
+  background: #3a6ff7;
+  color: #fff;
+  border-radius: 6px;
 }
