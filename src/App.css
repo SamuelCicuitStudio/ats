@@ -192,20 +192,26 @@
   color: #1d4ed8;
 }
 .pipeline-drop {
-  padding: 20px;
-  background: var(--panel);
-  border: 1px dashed var(--border);
-  border-radius: 18px;
-  min-height: 320px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  min-height: 0;
   display: flex;
-  align-items: center;
 }
 .pipeline-drop .uploadbox {
   border-style: dashed;
-  min-height: 0;
+  border-color: var(--border);
+  border-radius: 18px;
+  min-height: 320px;
   width: 100%;
-  background: transparent;
-  border-color: transparent;
+  height: 100%;
+  background: var(--panel);
+}
+.pipeline-drop .uploadbox .card-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Chat / FAB keep sizes */
@@ -392,8 +398,24 @@
 
 /* Buttons: keep Bootstrap sizing feel */
 .btn {
-  font-size: 1rem;
-  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  padding: 0.9rem 1.8rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.35);
+}
+.btn-primary:hover {
+  opacity: 0.95;
+}
+.btn-primary:active {
+  transform: scale(0.97);
 }
 
 /* ---------- Auth (login) styles ---------- */
@@ -453,20 +475,9 @@
   outline: none;
 }
 .login-button {
-  background-color: var(--accent);
-  border: none;
-  color: #fff;
-  text-transform: uppercase;
-  padding: 14px 60px;
-  border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.35);
-  transition: transform 0.3s ease, background 0.3s ease;
-}
-.login-button:hover {
-  background: var(--accent-strong);
-}
-.login-button:active {
-  transform: scale(0.97);
+  width: 85%;
+  max-width: 320px;
+  justify-content: center;
 }
 .login-footer {
   margin-top: 18px;
@@ -491,6 +502,15 @@
 }
 .underlineHover:hover::after {
   width: 100%;
+}
+.users-role-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.users-table input {
+  width: 100%;
+  min-width: 160px;
 }
 .fadeInDown {
   animation: fadeInDown 0.8s ease both;

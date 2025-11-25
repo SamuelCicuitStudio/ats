@@ -217,40 +217,43 @@ export default function Users({ session, onUserUpdate }) {
                   placeholder="Optional"
                 />
               </div>
-              <div className="col-12 col-md-2 d-flex align-items-end gap-3">
-                <div className="form-check me-3">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={newUser.roles.includes("user")}
-                    onChange={() =>
-                      setNewUser((u) => ({
-                        ...u,
-                        roles: toggleRole(u, "user"),
-                      }))
-                    }
-                    id="role-user"
-                  />
-                  <label className="form-check-label ms-1" htmlFor="role-user">
-                    user
-                  </label>
-                </div>
-                <div className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={newUser.roles.includes("admin")}
-                    onChange={() =>
-                      setNewUser((u) => ({
-                        ...u,
-                        roles: toggleRole(u, "admin"),
-                      }))
-                    }
-                    id="role-admin"
-                  />
-                  <label className="form-check-label ms-1" htmlFor="role-admin">
-                    admin
-                  </label>
+              <div className="col-12 col-md-3">
+                <label className="form-label">Roles</label>
+                <div className="users-role-group">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={newUser.roles.includes("user")}
+                      onChange={() =>
+                        setNewUser((u) => ({
+                          ...u,
+                          roles: toggleRole(u, "user"),
+                        }))
+                      }
+                      id="role-user"
+                    />
+                    <label className="form-check-label ms-1" htmlFor="role-user">
+                      user
+                    </label>
+                  </div>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={newUser.roles.includes("admin")}
+                      onChange={() =>
+                        setNewUser((u) => ({
+                          ...u,
+                          roles: toggleRole(u, "admin"),
+                        }))
+                      }
+                      id="role-admin"
+                    />
+                    <label className="form-check-label ms-1" htmlFor="role-admin">
+                      admin
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="col-12">
@@ -265,7 +268,7 @@ export default function Users({ session, onUserUpdate }) {
             </form>
 
             <div className="table-responsive mt-4">
-              <table className="table table-dark table-striped align-middle mb-0">
+              <table className="table users-table table-dark table-striped align-middle mb-0 w-100">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -283,7 +286,7 @@ export default function Users({ session, onUserUpdate }) {
                     };
                     return (
                       <tr key={u.username}>
-                        <td style={{ minWidth: 260 }}>
+                        <td>
                           <input
                             className="form-control mb-2"
                             value={state.new_username}
@@ -308,15 +311,15 @@ export default function Users({ session, onUserUpdate }) {
                             placeholder="Display name"
                           />
                         </td>
-                        <td style={{ minWidth: 280 }}>
-                          <div className="d-flex align-items-center gap-3 mb-2">
+                        <td>
+                          <div className="users-role-group mb-2">
                             {["user", "admin"].map((r) => (
-                            <div className="form-check form-check-inline mb-0" key={r}>
-                              <input
-                                className="form-check-input"
-                                type="checkbox"
-                                checked={(state.roles || []).includes(r)}
-                                onChange={() =>
+                              <div className="form-check" key={r}>
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  checked={(state.roles || []).includes(r)}
+                                  onChange={() =>
                                     onEditField(
                                       u.username,
                                       "roles",

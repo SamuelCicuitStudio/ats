@@ -40,10 +40,10 @@ export default function User({ user, onLogin, fullPage = false }) {
             placeholder="Password"
           />
           <button
-            className="login-button fadeIn fourth"
-            type="submit"
-            disabled={busy}
-          >
+          className="btn btn-primary login-button fadeIn fourth"
+          type="submit"
+          disabled={busy}
+        >
             {busy ? "Signing in..." : "Log In"}
           </button>
           {err && <div className="alert alert-danger mt-2">{err}</div>}
