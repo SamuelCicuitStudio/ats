@@ -176,7 +176,7 @@ export default function Users({ session, onUserUpdate }) {
       </div>
 
       {isAdmin && (
-        <div className="card bg-dark-subtle border-0">
+        <div className="card users-admin-card border-0">
           <div className="card-body">
             <h3 className="h5 mb-3">Users</h3>
 
@@ -268,7 +268,7 @@ export default function Users({ session, onUserUpdate }) {
             </form>
 
             <div className="table-responsive mt-4">
-              <table className="table users-table table-dark table-striped align-middle mb-0 w-100">
+              <table className="table users-table table-striped align-middle mb-0 w-100">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -286,9 +286,12 @@ export default function Users({ session, onUserUpdate }) {
                     };
                     return (
                       <tr key={u.username}>
-                        <td>
+                        <td className="users-cell">
+                          <label className="form-label text-uppercase small fw-semibold">
+                            Username
+                          </label>
                           <input
-                            className="form-control mb-2"
+                            className="form-control mb-3"
                             value={state.new_username}
                             onChange={(e) =>
                               onEditField(
@@ -298,6 +301,9 @@ export default function Users({ session, onUserUpdate }) {
                               )
                             }
                           />
+                          <label className="form-label text-uppercase small fw-semibold">
+                            Display name
+                          </label>
                           <input
                             className="form-control"
                             value={state.display_name || ""}
@@ -311,12 +317,14 @@ export default function Users({ session, onUserUpdate }) {
                             placeholder="Display name"
                           />
                         </td>
-                        <td>
-                          <div className="users-role-group mb-2">
+                        <td className="users-cell">
+                          <label className="form-label text-uppercase small fw-semibold">
+                            Roles
+                          </label>
+                          <div className="users-role-checkboxes mb-3">
                             {["user", "admin"].map((r) => (
-                              <div className="form-check" key={r}>
+                              <label className="role-pill" key={r}>
                                 <input
-                                  className="form-check-input"
                                   type="checkbox"
                                   checked={(state.roles || []).includes(r)}
                                   onChange={() =>
@@ -326,14 +334,14 @@ export default function Users({ session, onUserUpdate }) {
                                       toggleRole(state, r)
                                     )
                                   }
-                                  id={`${u.username}-${r}`}
                                 />
-                                <label className="form-check-label ms-1" htmlFor={`${u.username}-${r}`}>
-                                  {r}
-                                </label>
-                              </div>
+                                <span>{r}</span>
+                              </label>
                             ))}
                           </div>
+                          <label className="form-label text-uppercase small fw-semibold">
+                            Reset password
+                          </label>
                           <input
                             className="form-control"
                             type="password"
@@ -345,13 +353,13 @@ export default function Users({ session, onUserUpdate }) {
                                 e.target.value
                               )
                             }
-                            placeholder="Set new password"
+                            placeholder="New password"
                           />
                         </td>
-                        <td className="text-end">
-                          <div className="btn-group">
+                        <td className="users-cell text-end align-middle">
+                          <div className="users-actions">
                             <button
-                              className="btn btn-outline-primary btn-sm"
+                              className="btn btn-primary"
                               type="button"
                               onClick={() => saveUser(u.username)}
                               disabled={busy}
@@ -359,7 +367,7 @@ export default function Users({ session, onUserUpdate }) {
                               Save
                             </button>
                             <button
-                              className="btn btn-outline-danger btn-sm"
+                              className="btn btn-danger"
                               type="button"
                               onClick={() => removeUser(u.username)}
                               disabled={busy}

@@ -18,10 +18,9 @@
   background: var(--panel-strong);
   border-bottom: 1px solid var(--border);
 }
-.topbar h1 {
-  margin: 0;
-  font-size: 1.45rem;
-  letter-spacing: 0.4px;
+.topbar-icon {
+  width: 90px;
+  height: 56px;
 }
 
 /* >>> fix: make sidebar + content sit next to each other */
@@ -227,10 +226,28 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
 }
 .fab:hover {
   transform: scale(1.06);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+.fab {
+  animation: floatY 5s ease-in-out infinite;
+}
+@keyframes floatY {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 #chat2 .card-header {
@@ -503,14 +520,95 @@
 .underlineHover:hover::after {
   width: 100%;
 }
+.user-menu {
+  position: relative;
+}
+.user-menu:hover .user-menu-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.user-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--panel-strong);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+.user-menu-dropdown .dropdown-item {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 8px 14px;
+  width: 100%;
+  text-align: left;
+  border-radius: 6px;
+}
+.user-menu-dropdown .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
 .users-role-group {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
+.users-role-checkboxes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+.role-pill input {
+  width: auto;
+  margin: 0;
+}
+.users-admin-card {
+  background: var(--panel-strong);
+  color: var(--text);
+}
+.users-table th,
+.users-table td {
+  background: var(--panel-strong);
+  color: var(--text);
+  border-color: var(--border);
+}
+.users-table tbody tr:nth-child(even) td {
+  background: var(--panel);
+}
 .users-table input {
   width: 100%;
   min-width: 160px;
+}
+.users-cell {
+  vertical-align: top;
+  min-width: 220px;
+}
+.users-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+.users-actions .btn-danger {
+  background: #dc2626;
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35);
 }
 .fadeInDown {
   animation: fadeInDown 0.8s ease both;

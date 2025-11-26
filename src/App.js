@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import TabNav from "./components/TabNav";
 import ChatFab from "./components/ChatFab";
 
@@ -16,16 +16,9 @@ export default function App() {
   const [tab, setTab] = useState("pipeline"); // 'pipeline' | 'tests' | 'history' | 'users'
   const [history, setHistory] = useState([]);
   const [session, setSession] = useState(null); // {token, user}
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light"); // light | dark
 
   const user = session?.user;
   const isAdmin = !!(user?.roles || []).includes("admin");
-
-  // apply/persist theme
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   const handleStoreHistory = (entry) => {
     // entry shape is provided by children (Pipeline/TestGen)
@@ -64,20 +57,29 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <h1>ATS Pipeline</h1>
-        <div className="d-flex align-items-center gap-2">
-          <button
-            type="button"
-            className="btn btn-outline-primary btn-sm theme-toggle"
-            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-            aria-label="Toggle theme"
-          >
-            {theme === "light" ? "☀️" : "🌙"}
-          </button>
+        <svg
+          className="topbar-icon"
+          viewBox="0 0 64 40"
+          role="img"
+          aria-label="ATS visual icon"
+        >
+          <rect x="2" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent)" strokeWidth="2" />
+          <rect x="40" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent-strong)" strokeWidth="2" />
+          <path
+            d="M32 8c7.18 0 13 5.82 13 13s-5.82 13-13 13-13-5.82-13-13 5.82-13 13-13zm0 6.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0-4l1.2 2.8 3-.4-1.8 2.4 1.8 2.4-3-.4-1.2 2.8-1.2-2.8-3 .4 1.8-2.4-1.8-2.4 3 .4 1.2-2.8z"
+            fill="url(#topbarGearGrad)"
+          />
+          <defs>
+            <linearGradient id="topbarGearGrad" x1="19" y1="8" x2="45" y2="34" gradientUnits="userSpaceOnUse">
+              <stop stopColor="var(--accent)" />
+              <stop offset="1" stopColor="var(--accent-strong)" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="user-menu">
           <button
             className="user-badge"
-            title="Click to logout"
-            onClick={() => setSession(null)}
+            title="Open menu"
             type="button"
           >
             <span className="user-circle">
@@ -88,6 +90,15 @@ export default function App() {
               <div className="user-role">{(user.roles || []).join(", ")}</div>
             </div>
           </button>
+          <div className="user-menu-dropdown">
+            <button
+              type="button"
+              className="dropdown-item"
+              onClick={() => setSession(null)}
+            >
+              Disconnect
+            </button>
+          </div>
         </div>
       </header>
 

@@ -99,6 +99,7 @@ export default function ChatFab() {
         className="fab btn btn-primary rounded-circle position-fixed end-0 bottom-0 m-4"
         onClick={() => setOpen((o) => !o)}
         ref={fabRef}
+        aria-label="Open chat"
       >
         💬
       </button>

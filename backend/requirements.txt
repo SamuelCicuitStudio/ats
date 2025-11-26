@@ -1,20 +1,41 @@
-﻿fastapi>=0.110
-uvicorn[standard]>=0.27
-python-dotenv>=1.0
-requests>=2.31
-httpx>=0.27
+﻿# Requirements for backend services (parsing, evaluation, LLM clients, media)
+# Copy into your virtualenv and install with:
+#   pip install -r backend/config/requierement.txt
 
-# Parsers
-pdfplumber>=0.11
-python-docx>=1.1
+pdfplumber>=0.6.0
+docx2txt>=0.8
+python-docx>=0.8.11
+PyMuPDF>=1.22.0
+
+# LLM clients
+openai>=0.28.0
+ollama>=0.1.0
+python-dotenv>=1.0.0
+
+# Web framework and UI
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+streamlit>=1.25.0
+
+# Data and NLP
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+sentence-transformers>=2.2.2
+transformers>=4.30.0
+torch>=2.0.0
+
+# Audio / video / vision
+moviepy>=1.0.3
+opencv-python>=4.7.0
+librosa>=0.10.0
+openai-whisper
+
+# Utilities
+requests>=2.28.0
+python-dateutil>=2.8.2
+regex>=2023.8.8
+jsonschema>=4.0.0
+tqdm>=4.0.0
 langdetect>=1.0.9
-jsonschema>=4.22
-PyMuPDF>=1.24
-
-# Embeddings & NLP
-sentence-transformers>=2.7
-scikit-learn>=1.4
-numpy>=1.26
-
-# Pydantic v2 (FastAPI expects v2)
-pydantic>=2.6
+plotly>=6.0.0

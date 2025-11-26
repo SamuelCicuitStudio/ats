@@ -1,22 +1,6 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 
 :root {
-  /* LIGHT THEME */
-  --bg: #fbfaf5;
-  --bg-2: #f2efe6;
-  --panel: #ffffff;
-  --panel-strong: #fff9f3;
-  --border: #e4ddd0;
-  --muted: #6d665b;
-  --text: #1f1a13;
-  --accent: #f97316; /* warm orange */
-  --accent-strong: #ea580c;
-  --shadow: 0 18px 44px rgba(31, 26, 19, 0.12);
-  --table-border: rgba(31, 26, 19, 0.12);
-}
-
-[data-theme="dark"] {
-  /* DARK THEME */
   --bg: #050609;
   --bg-2: #0b0f17;
   --panel: #12141c;
@@ -40,8 +24,8 @@ html,
   height: 100%;
   margin: 0;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at 15% 20%, rgba(249, 115, 22, 0.12), transparent 30%),
-    radial-gradient(circle at 85% 5%, rgba(234, 88, 12, 0.1), transparent 35%),
+  background: radial-gradient(circle at 15% 20%, rgba(249, 115, 22, 0.2), transparent 35%),
+    radial-gradient(circle at 85% 5%, rgba(234, 88, 12, 0.15), transparent 40%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
   color: var(--text);
 }
@@ -70,17 +54,6 @@ button {
   --bs-warning: #facc15;
   --bs-danger: #ef4444;
 
-  --bs-link-color: var(--accent);
-}
-
-[data-theme="dark"] {
-  --bs-body-bg: var(--bg);
-  --bs-body-color: var(--text);
-  --bs-border-color: var(--border);
-
-  --bs-primary: var(--accent);
-  --bs-primary-rgb: 251, 146, 60;
-  --bs-secondary-color: var(--muted);
   --bs-link-color: var(--accent);
 }
 
