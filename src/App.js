@@ -17,8 +17,24 @@ const StreamingPlaceholder = () => (
     <div className="header">
       <h2>Streaming CV</h2>
     </div>
-    <div className="section">
-      <p className="muted">A venir.</p>
+    <div className="paper-wrap">
+      <div className="paper">
+        <div className="tile">
+          <svg
+            className="giant"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            stroke="var(--primary)"
+            strokeWidth="1.6"
+          >
+            <rect x="6" y="4" width="12" height="16" rx="2" stroke="var(--primary)" />
+            <path d="M9 8h6M9 12h6M9 16h4" stroke="var(--primary)" />
+          </svg>
+          <h4 style={{ color: "#0f172a" }}>Fonctionnalite en developpement</h4>
+          <p className="muted">Le streaming de CV sera bientot disponible</p>
+        </div>
+      </div>
     </div>
     <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
   </section>

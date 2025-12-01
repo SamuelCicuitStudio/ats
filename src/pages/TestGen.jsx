@@ -56,7 +56,7 @@ export default function TestGen({ onStoreHistory }) {
       </div>
       <div className="paper-wrap">
         <div className="paper">
-          <div className="tile" style={{ borderRight: "1px dashed #e4e6ed" }}>
+          <div className="tile">
             <UploadBox
               label="Selectionnez la JD"
               onFile={handleJD}
@@ -78,21 +78,6 @@ export default function TestGen({ onStoreHistory }) {
               {generating ? "Generating..." : "Generate Questions"}
             </button>
             {err && <div className="alert alert-danger mb-0 py-2">{err}</div>}
-          </div>
-          <div className="tile">
-            <svg
-              className="giant"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              stroke="var(--primary)"
-              strokeWidth="1.6"
-            >
-              <rect x="6" y="4" width="12" height="16" rx="2" stroke="var(--primary)" />
-              <path d="M9 8h6M9 12h6M9 16h4" stroke="var(--primary)" />
-            </svg>
-            <h4 style={{ color: "#0f172a" }}>Fonctionnalite en developpement</h4>
-            <p className="muted">La generation automatique de tests sera bientot disponible</p>
           </div>
         </div>
       </div>
