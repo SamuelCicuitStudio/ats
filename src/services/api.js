@@ -94,6 +94,11 @@ export const api = {
     postJson("/match/bulk", { cvs, jd, weights }),
   // test gen
   genQuestions: (jd) => postJson("/tests/generate", { jd }),
+  // history & summary
+  history: (limit = 50, kind) =>
+    getJson(`/history?limit=${encodeURIComponent(limit)}${kind ? `&kind=${encodeURIComponent(kind)}` : ""}`),
+  summary: () => getJson("/dashboard/summary"),
+  storageFileUrl: (path) => `${API_BASE}/storage/file?path=${encodeURIComponent(path)}`,
   // kpi chat
   kpiLoad: (file) => postFile("/kpi/load", file),
   kpiAsk: (session_id, question) =>

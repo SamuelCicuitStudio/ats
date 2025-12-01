@@ -1,5 +1,6 @@
 // src/pages/Home.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { api } from "../services/api";
 
 const candidates = [
   {
@@ -45,11 +46,32 @@ const statusLabels = {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("all");
+  const [summary, setSummary] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .summary()
+      .then((data) => {
+        if (mounted) setSummary(data);
+      })
+      .catch((e) => {
+        if (mounted) setErr(String(e));
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     if (activeTab === "all") return candidates;
     return candidates.filter((c) => c.status === activeTab);
   }, [activeTab]);
+
+  const counts = summary?.counts || {};
+  const recentMatches = (summary?.recents?.match || []).concat(summary?.recents?.match_bulk || []);
+  const recentTests = summary?.recents?.test_generate || [];
 
   return (
     <section className="canvas" aria-label="Accueil">
@@ -69,6 +91,61 @@ export default function Home() {
         </div>
       </div>
       <div className="section">
+        {err && <div className="alert alert-danger mb-3">{err}</div>}
+        <div className="cards" style={{ marginBottom: 18 }}>
+          <article className="card">
+            <div className="name">CV parsés</div>
+            <div className="h4 mt-1">{counts.cv_parse || 0}</div>
+          </article>
+          <article className="card">
+            <div className="name">JD parsés</div>
+            <div className="h4 mt-1">{counts.jd_parse || 0}</div>
+          </article>
+          <article className="card">
+            <div className="name">Matchs</div>
+            <div className="h4 mt-1">{(counts.match || 0) + (counts.match_bulk || 0)}</div>
+          </article>
+          <article className="card">
+            <div className="name">Tests générés</div>
+            <div className="h4 mt-1">{counts.test_generate || 0}</div>
+          </article>
+        </div>
+
+        {recentMatches.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <h4 style={{ margin: "0 0 8px" }}>Matchs récents</h4>
+            <div className="cards">
+              {recentMatches.slice(0, 3).map((m) => (
+                <article className="card" key={m.id}>
+                  <div className="name">Score global</div>
+                  <div className="h4 mt-1">
+                    {((m.payload?.result?.global_score || 0) * 100).toFixed(0)}%
+                  </div>
+                  <div className="muted small">
+                    {m.payload?.result?.candidate_name || "N/A"}
+                  </div>
+                  <div className="muted small">{new Date(m.created_at).toLocaleString()}</div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recentTests.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <h4 style={{ margin: "0 0 8px" }}>Tests générés</h4>
+            <div className="cards">
+              {recentTests.slice(0, 3).map((t) => (
+                <article className="card" key={t.id}>
+                  <div className="name">Questions</div>
+                  <div className="h4 mt-1">{t.payload?.count ?? 0}</div>
+                  <div className="muted small">{new Date(t.created_at).toLocaleString()}</div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="cards">
           {filtered.map((c) => (
             <article className="card" key={c.email}>

@@ -4,14 +4,17 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from jsonschema.exceptions import ValidationError
 
 # storage tree bootstrap
-from app.utils.storage_utils import ensure_storage_tree, persist_cv_artifacts, persist_jd_artifacts
+from app.utils.storage_utils import ensure_storage_tree, persist_cv_artifacts, persist_jd_artifacts, STORAGE_ROOT
+from app.utils import history_store
 
 # service modules
 from app.services import cv_parser, jd_parser, evaluator, matcher, test_generator, kpi_chat
@@ -142,6 +145,40 @@ def health():
         "routes": sorted({r.path for r in app.routes}),
     }
 
+# ---------- HISTORY & SUMMARY ----------
+@app.get("/history")
+def get_history(limit: int = 50, kind: str | None = None):
+    try:
+        limit = max(1, min(int(limit), 500))
+    except Exception:
+        limit = 50
+    return {"items": history_store.list_events(limit=limit, kind=kind)}
+
+
+@app.get("/dashboard/summary")
+def dashboard_summary():
+    return history_store.summary()
+
+
+# ---------- STORAGE FILE SERVING ----------
+@app.get("/storage/file")
+def get_storage_file(path: str):
+    if not path:
+        raise HTTPException(status_code=400, detail="Path is required")
+    base = STORAGE_ROOT.resolve()
+    p = Path(path)
+    if not p.is_absolute():
+        p = base / p
+    try:
+        rp = p.resolve()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if base not in rp.parents and rp != base:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not rp.exists() or not rp.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(rp), filename=rp.name)
+
 
 # ---------- CV PARSER ----------
 @app.post("/cv/parse")
@@ -158,6 +195,15 @@ async def cv_parse(file: UploadFile = File(...)):
         cv_json, raw_text = await asyncio.to_thread(cv_parser.parse_cv, file.filename, raw, req_id)
         eval_json = evaluator.evaluate(parsed_json=cv_json, raw_text=raw_text, kind="cv")
         storage_paths = persist_cv_artifacts(req_id, file.filename, raw, cv_json)
+        history_store.append_event(
+            "cv_parse",
+            {
+                "request_id": req_id,
+                "filename": file.filename,
+                "storage": storage_paths,
+                "evaluation": eval_json,
+            },
+        )
         return {
             "cv": cv_json,
             "evaluation": eval_json,
@@ -187,6 +233,15 @@ async def jd_parse(file: UploadFile = File(...)):
         jd_json, raw_text = await asyncio.to_thread(jd_parser.parse_jd, file.filename, raw, req_id)
         eval_json = evaluator.evaluate(parsed_json=jd_json, raw_text=raw_text, kind="jd")
         storage_paths = persist_jd_artifacts(req_id, file.filename, raw, jd_json)
+        history_store.append_event(
+            "jd_parse",
+            {
+                "request_id": req_id,
+                "filename": file.filename,
+                "storage": storage_paths,
+                "evaluation": eval_json,
+            },
+        )
         return {
             "jd": jd_json,
             "evaluation": eval_json,
@@ -211,6 +266,10 @@ def post_match(body: MatchBody):
     req_id = str(uuid.uuid4())
     try:
         result = matcher.match(body.cv, body.jd, weights=body.weights)
+        history_store.append_event(
+            "match",
+            {"request_id": req_id, "result": result, "weights": body.weights},
+        )
         return {"result": result, "request_id": req_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Matching failed: {e}")
@@ -244,6 +303,11 @@ def post_match_bulk(body: BulkMatchBody):
                 status_code=500, detail=f"Matching failed for CV #{idx + 1}: {e}"
             )
 
+    history_store.append_event(
+        "match_bulk",
+        {"request_id": req_id, "count": len(results), "results": results},
+    )
+
     return {"results": results, "count": len(results), "request_id": req_id}
 
 
@@ -257,6 +321,14 @@ def tests_generate(body: TestBody):
     req_id = str(uuid.uuid4())
     try:
         res = test_generator.generate_questions(body.jd)
+        history_store.append_event(
+            "test_generate",
+            {
+                "request_id": req_id,
+                "storage": {"path": res.get("storage_path")},
+                "count": len(res.get("questions") or []),
+            },
+        )
         return {
             "questions": res["questions"],
             "request_id": req_id,

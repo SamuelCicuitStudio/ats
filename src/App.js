@@ -40,20 +40,20 @@ const StreamingPlaceholder = () => (
   </section>
 );
 
-const HistoriquePlaceholder = ({ items }) => (
+const HistoriquePlaceholder = () => (
   <section className="canvas">
     <div className="header">
       <h2>Historique</h2>
     </div>
     <div className="section">
-      {items?.length ? <History items={items} /> : <p className="muted">Historique des actions (placeholder).</p>}
+      <History />
     </div>
     <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
   </section>
 );
 
 export default function App() {
-  const [tab, setTab] = useState("pipeline");
+  const [tab, setTab] = useState("home");
   const [history, setHistory] = useState([]);
   const [session, setSession] = useState(null);
 
@@ -115,7 +115,7 @@ export default function App() {
       case "streaming":
         return <StreamingPlaceholder />;
       case "historique":
-        return <HistoriquePlaceholder items={history} />;
+        return <HistoriquePlaceholder />;
       default:
         return <Home />;
     }
