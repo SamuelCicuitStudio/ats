@@ -130,38 +130,38 @@ export default function Pipeline({ onStoreHistory }) {
       <div className="header">
         <h2>Pipeline de Recrutement Integree</h2>
         <div className="steps">
-            <div className={`step ${cvFiles.length ? "active" : ""}`}>
-              <div className="dot dot-upload" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 16V4" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M7 9l5-5 5 5" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M5 19h14" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              Upload
+          <div className={`step ${cvFiles.length ? "active" : ""}`}>
+            <div className="dot dot-upload" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 16V4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+                <path d="M7 9l5-5 5 5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 19h14" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
-            <span className="muted">→</span>
-            <div className={`step ${jd ? "active" : ""}`}>
-              <div className="dot dot-parse" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" stroke="#0f172a" strokeWidth="2" />
-                  <path d="M14 3v5h5" stroke="#0f172a" strokeWidth="2" />
-                  <path d="M9 12h6M9 15h6" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              Parsing
+            Upload
+          </div>
+          <span className="muted">→</span>
+          <div className={`step ${jd ? "active" : ""}`}>
+            <div className="dot dot-parse" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" stroke="#16a34a" strokeWidth="2" />
+                <path d="M14 3v5h5" stroke="#16a34a" strokeWidth="2" />
+                <path d="M9 12h6M9 15h6" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
-            <span className="muted">→</span>
-            <div className={`step ${results.length ? "active" : ""}`}>
-              <div className="dot dot-match" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="8" stroke="#0f172a" strokeWidth="2" />
-                  <circle cx="12" cy="12" r="3" fill="#0f172a" />
-                  <path d="M12 4v2M12 18v2M4 12h2M18 12h2" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              Matching
+            Parsing
+          </div>
+          <span className="muted">→</span>
+          <div className={`step ${results.length ? "active" : ""}`}>
+            <div className="dot dot-match" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="8" stroke="#dc2626" strokeWidth="2" />
+                <circle cx="12" cy="12" r="3" fill="#dc2626" />
+                <path d="M12 4v2M12 18v2M4 12h2M18 12h2" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
+            Matching
+          </div>
           </div>
       </div>
 

@@ -87,9 +87,9 @@ export default function App() {
     { key: "home", label: "Accueil" },
     { key: "pipeline", label: "Pipeline de Recrutement" },
     { key: "tests", label: "Generation de Tests" },
-    { key: "users", label: "Profil Utilisateur" },
     { key: "streaming", label: "Streaming CV" },
     { key: "historique", label: "Historique" },
+    { key: "users", label: "Gestion utilisateur", admin: true },
   ];
 
   const renderScreen = () => {
@@ -104,7 +104,7 @@ export default function App() {
         return (
           <section className="canvas">
             <div className="header">
-              <h2>Profil Utilisateur</h2>
+              <h2>Gestion utilisateur</h2>
             </div>
             <div className="section">
               <Users session={session} onUserUpdate={handleUserUpdate} />
@@ -134,7 +134,9 @@ export default function App() {
               key={item.key}
               href="#"
               data-screen={item.key}
-              className={tab === item.key ? "active" : ""}
+              className={`${tab === item.key ? "active" : ""} ${
+                item.admin ? "nav-admin" : ""
+              }`}
               onClick={(e) => {
                 e.preventDefault();
                 setTab(item.key);

@@ -111,6 +111,12 @@ body {
   letter-spacing: 0.08em;
 }
 
+.nav a.nav-admin {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
 .topbar {
   grid-column: 2 / -1;
   grid-row: 1 / 2;
@@ -208,12 +214,12 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 15px;
   color: #334155;
 }
 .step .dot {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -408,10 +414,11 @@ body {
   border-radius: 16px;
   min-height: 360px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
   align-items: center;
   justify-items: center;
+  text-align: center;
 }
 .paper .tile {
   display: grid;
