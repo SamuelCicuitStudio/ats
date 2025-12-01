@@ -1,9 +1,17 @@
-// src/pages/Pipeline.jsx
+﻿// src/pages/Pipeline.jsx
 import React, { useState } from "react";
 import UploadBox from "../components/UploadBox.jsx";
 import { api } from "../services/api.js";
 
-export default function Pipeline({ onStoreHistory }) {
+export default function Pipeline({
+  onStoreHistory,
+  job,
+  jobActive,
+  onJobStart,
+  onJobUpdate,
+  onJobClear,
+  onJobCancel,
+}) {
   const MAX_CV_FILES = 100;
 
   const [cvFiles, setCvFiles] = useState([]);
@@ -17,6 +25,10 @@ export default function Pipeline({ onStoreHistory }) {
   const [info, setInfo] = useState("");
 
   function handleCV(files, totalSelected) {
+    if (jobActive) {
+      setErr("Une tache est deja en cours. Annulez-la avant de charger d'autres CVs.");
+      return;
+    }
     setErr("");
     setInfo("");
     setResults([]);
@@ -33,13 +45,17 @@ export default function Pipeline({ onStoreHistory }) {
     const capped = list.slice(0, MAX_CV_FILES);
     if (originalCount > MAX_CV_FILES) {
       setInfo(
-        `Vous avez sélectionné ${originalCount} CVs ; seuls les ${MAX_CV_FILES} premiers seront traités.`
+        `Vous avez selectionne ${originalCount} CVs ; seuls les ${MAX_CV_FILES} premiers seront traites.`
       );
     }
     setCvFiles(capped);
   }
 
   function handleJD(file) {
+    if (jobActive) {
+      setErr("Une tache est deja en cours. Annulez-la avant de charger un nouveau JD.");
+      return;
+    }
     setErr("");
     setResults([]);
     setJdFile(file || null);
@@ -47,6 +63,10 @@ export default function Pipeline({ onStoreHistory }) {
   }
 
   function resetAll() {
+    if (jobActive) {
+      setErr("Impossible de reinitialiser pendant une tache en cours. Annulez-la d'abord.");
+      return;
+    }
     setCvFiles([]);
     setJdFile(null);
     setJd(null);
@@ -57,9 +77,13 @@ export default function Pipeline({ onStoreHistory }) {
   }
 
   async function doMatch() {
+    if (jobActive) {
+      setErr("Une autre tache est en cours. Annulez-la avant de lancer un nouveau matching.");
+      return;
+    }
     if (!cvFiles.length || !jdFile) {
       setErr(
-        "Merci de charger un JD et au moins un CV (jusqu'à 100) avant de lancer le matching."
+        "Merci de charger un JD et au moins un CV (jusqu'a 100) avant de lancer le matching."
       );
       return;
     }
@@ -68,24 +92,52 @@ export default function Pipeline({ onStoreHistory }) {
     setResults([]);
     setMatchLoading(true);
     setJdLoading(true);
+    const totalSteps = cvFiles.length + 1; // JD + CVs
     setCvProgress({ done: 0, total: cvFiles.length });
+    const controller = onJobStart?.({
+      key: "pipeline",
+      label: "Matching en cours",
+      detail: "Analyse du JD...",
+      progress: { done: 0, total: totalSteps, message: "Analyse du JD..." },
+    });
     try {
-      const { jd: jdJson } = await api.parseJD(jdFile);
+      const { jd: jdJson } = await api.parseJD(jdFile, { signal: controller?.signal });
       setJd(jdJson);
       setJdLoading(false);
+      onJobUpdate?.({
+        status: "running",
+        detail: "Analyse des CVs...",
+        progress: { done: 1, total: totalSteps, message: "Analyse des CVs..." },
+      });
 
       const parsed = [];
       for (let i = 0; i < cvFiles.length; i += 1) {
         setCvProgress({ done: i, total: cvFiles.length });
-        const { cv: cvJson } = await api.parseCV(cvFiles[i]);
+        onJobUpdate?.({
+          status: "running",
+          detail: `Analyse du CV ${i + 1}/${cvFiles.length}`,
+          progress: {
+            done: i + 1,
+            total: totalSteps,
+            message: `Analyse du CV ${i + 1} sur ${cvFiles.length}`,
+          },
+        });
+        const { cv: cvJson } = await api.parseCV(cvFiles[i], { signal: controller?.signal });
         parsed.push({ file: cvFiles[i], cv: cvJson });
         setCvProgress({ done: i + 1, total: cvFiles.length });
       }
 
+      onJobUpdate?.({
+        status: "running",
+        detail: "Matching des profils...",
+        progress: { done: totalSteps, total: totalSteps, message: "Matching..." },
+      });
+
       const bulk = await api.matchBulk(
         parsed.map((p) => p.cv),
         jdJson,
-        null
+        null,
+        { signal: controller?.signal }
       );
 
       const mapped = (bulk.results || []).map((entry) => {
@@ -112,15 +164,18 @@ export default function Pipeline({ onStoreHistory }) {
         results: mapped,
       });
     } catch (e) {
-      setErr(String(e));
+      if (e.name === "AbortError") setErr("Tache annulee.");
+      else setErr(String(e));
     } finally {
       setJdLoading(false);
       setMatchLoading(false);
+      onJobClear?.();
     }
   }
 
   const isParsingCvs =
     cvProgress.total > 0 && cvProgress.done < cvProgress.total;
+  const busy = matchLoading || jdLoading || isParsingCvs || jobActive;
 
   return (
     <section
@@ -141,7 +196,7 @@ export default function Pipeline({ onStoreHistory }) {
             </div>
             Upload
           </div>
-          <span className="muted">→</span>
+          <span className="muted">&rarr;</span>
           <div className={`step ${jd ? "active" : ""}`}>
             <div className="dot dot-parse" aria-hidden="true">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -152,7 +207,7 @@ export default function Pipeline({ onStoreHistory }) {
             </div>
             Parsing
           </div>
-          <span className="muted">→</span>
+          <span className="muted">&rarr;</span>
           <div className={`step ${results.length ? "active" : ""}`}>
             <div className="dot dot-match" aria-hidden="true">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -177,6 +232,7 @@ export default function Pipeline({ onStoreHistory }) {
               maxFiles={MAX_CV_FILES}
               accept=".pdf,.docx,.txt"
               helper="Limite 200 Mo par fichier - PDF, DOCX, TXT"
+              disabled={busy}
             />
           </div>
           <div className="drop">
@@ -185,13 +241,14 @@ export default function Pipeline({ onStoreHistory }) {
               onFile={handleJD}
               accept=".pdf,.docx,.txt"
               helper="Limite 200 Mo par fichier - PDF, DOCX, TXT"
+              disabled={busy}
             />
           </div>
         </div>
 
         {cvFiles.length > 0 && (
           <div className="text-muted small mt-2">
-            {cvFiles.length} CV sélectionné{cvFiles.length > 1 ? "s" : ""} (max {MAX_CV_FILES})
+            {cvFiles.length} CV selectionne{cvFiles.length > 1 ? "s" : ""} (max {MAX_CV_FILES})
           </div>
         )}
         {cvFiles.length > 0 && (
@@ -213,32 +270,37 @@ export default function Pipeline({ onStoreHistory }) {
         )}
         {cvProgress.total > 0 && !isParsingCvs && cvProgress.done === cvProgress.total && (
           <div className="text-success small mt-2">
-            Analysé {cvProgress.total} CV{cvProgress.total > 1 ? "s" : ""}
+            Analyse {cvProgress.total} CV{cvProgress.total > 1 ? "s" : ""}
           </div>
         )}
         {jdLoading && <div className="muted small mt-2">Analyse du JD...</div>}
-        {jd && !jdLoading && <div className="text-success small mt-2">JD analysé</div>}
+        {jd && !jdLoading && <div className="text-success small mt-2">JD analyse</div>}
         {info && <div className="alert alert-info mt-3 mb-0 py-2">{info}</div>}
         {err && <div className="alert alert-danger mt-3 mb-0 py-2">{err}</div>}
 
         <div className="actions-row">
-          <button className="btn ghost" type="button" onClick={resetAll}>
+          <button className="btn ghost" type="button" onClick={resetAll} disabled={busy}>
             Annuler
           </button>
           <button
             className="btn primary"
             onClick={doMatch}
-            disabled={matchLoading || jdLoading || isParsingCvs || !cvFiles.length || !jdFile}
+            disabled={busy || !cvFiles.length || !jdFile}
             type="button"
           >
             {matchLoading ? "Matching..." : "Lancer le matching"}
           </button>
+          {jobActive && job?.key === "pipeline" && (
+            <button className="btn" type="button" onClick={onJobCancel}>
+              Annuler la tache
+            </button>
+          )}
         </div>
       </div>
 
       {results.length > 0 && (
         <div className="section">
-          <h3>Résultats du matching</h3>
+          <h3>Resultats du matching</h3>
           <div className="table-responsive">
             <table className="table align-middle my-3">
               <thead>
@@ -247,7 +309,7 @@ export default function Pipeline({ onStoreHistory }) {
                   <th>Fichier CV</th>
                   <th>Candidat</th>
                   <th>Global</th>
-                  <th>Détail</th>
+                  <th>Detail</th>
                 </tr>
               </thead>
               <tbody>

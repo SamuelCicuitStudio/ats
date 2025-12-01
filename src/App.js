@@ -1,6 +1,7 @@
 // src/App.js
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import ChatFab from "./components/ChatFab";
+import JobBar from "./components/JobBar";
 
 import Pipeline from "./pages/Pipeline";
 import TestGen from "./pages/TestGen";
@@ -40,13 +41,13 @@ const StreamingPlaceholder = () => (
   </section>
 );
 
-const HistoriquePlaceholder = () => (
+const HistoriquePlaceholder = ({ items }) => (
   <section className="canvas">
     <div className="header">
       <h2>Historique</h2>
     </div>
     <div className="section">
-      <History />
+      <History items={items} />
     </div>
     <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
   </section>
@@ -56,6 +57,8 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [history, setHistory] = useState([]);
   const [session, setSession] = useState(null);
+  const [job, setJob] = useState(null);
+  const jobController = useRef(null);
 
   const user = session?.user;
 
@@ -71,6 +74,33 @@ export default function App() {
     setSession((prev) =>
       prev ? { ...prev, user: { ...prev.user, ...updated } } : prev
     );
+  };
+
+  const startJob = (payload) => {
+    const controller = new AbortController();
+    jobController.current = controller;
+    setJob({
+      status: "running",
+      progress: { done: 0, total: 0, message: "" },
+      ...payload,
+    });
+    return controller;
+  };
+
+  const updateJob = (patch) => {
+    setJob((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const clearJob = () => {
+    jobController.current = null;
+    setJob(null);
+  };
+
+  const cancelJob = () => {
+    setJob((prev) =>
+      prev ? { ...prev, status: "cancelling", detail: prev.detail || "Annulation..." } : prev
+    );
+    if (jobController.current) jobController.current.abort();
   };
 
   if (!session) {
@@ -92,34 +122,55 @@ export default function App() {
     { key: "users", label: "Gestion utilisateur", admin: true },
   ];
 
-  const renderScreen = () => {
-    switch (tab) {
-      case "home":
-        return <Home />;
-      case "pipeline":
-        return <Pipeline onStoreHistory={handleStoreHistory} />;
-      case "tests":
-        return <TestGen onStoreHistory={handleStoreHistory} />;
-      case "users":
-        return (
-          <section className="canvas">
-            <div className="header">
-              <h2>Gestion utilisateur</h2>
-            </div>
-            <div className="section">
-              <Users session={session} onUserUpdate={handleUserUpdate} />
-            </div>
-            <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
-          </section>
-        );
-      case "streaming":
-        return <StreamingPlaceholder />;
-      case "historique":
-        return <HistoriquePlaceholder />;
-      default:
-        return <Home />;
-    }
-  };
+  const jobActive = !!job && job.status !== "done";
+
+  const screens = [
+    { key: "home", element: <Home /> },
+    {
+      key: "pipeline",
+      element: (
+        <Pipeline
+          onStoreHistory={handleStoreHistory}
+          job={job}
+          jobActive={jobActive}
+          onJobStart={startJob}
+          onJobUpdate={updateJob}
+          onJobClear={clearJob}
+          onJobCancel={cancelJob}
+        />
+      ),
+    },
+    {
+      key: "tests",
+      element: (
+        <TestGen
+          onStoreHistory={handleStoreHistory}
+          job={job}
+          jobActive={jobActive}
+          onJobStart={startJob}
+          onJobUpdate={updateJob}
+          onJobClear={clearJob}
+          onJobCancel={cancelJob}
+        />
+      ),
+    },
+    {
+      key: "users",
+      element: (
+        <section className="canvas">
+          <div className="header">
+            <h2>Gestion utilisateur</h2>
+          </div>
+          <div className="section">
+            <Users session={session} onUserUpdate={handleUserUpdate} />
+          </div>
+          <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
+        </section>
+      ),
+    },
+    { key: "streaming", element: <StreamingPlaceholder /> },
+    { key: "historique", element: <HistoriquePlaceholder items={history} /> },
+  ];
 
   return (
     <div className="app-shell">
@@ -165,6 +216,7 @@ export default function App() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
+              clearJob();
               setSession(null);
             }}
           >
@@ -173,8 +225,24 @@ export default function App() {
         </div>
       </header>
 
-      <main className="content">{renderScreen()}</main>
+      <main className="content">
+        {screens.map((screen) => {
+          const isActive = tab === screen.key;
+          const hidden = !isActive;
+          return (
+            <div
+              key={screen.key}
+              style={{ display: hidden ? "none" : "block" }}
+              aria-hidden={hidden}
+              data-screen-panel={screen.key}
+            >
+              {screen.element}
+            </div>
+          );
+        })}
+      </main>
 
+      <JobBar job={jobActive ? job : null} onCancel={cancelJob} />
       <ChatFab />
     </div>
   );

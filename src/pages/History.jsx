@@ -7,7 +7,10 @@ export default function History({ items: provided }) {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    if (provided) return;
+    if (typeof provided !== "undefined") {
+      setItems(provided || []);
+      return;
+    }
     let mounted = true;
     api
       .history(100)

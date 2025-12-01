@@ -7,13 +7,15 @@ function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function postFile(path, file, fieldName = "file", token) {
+async function postFile(path, file, fieldName = "file", token, opts = {}) {
+  const { signal } = opts;
   const fd = new FormData();
   fd.append(fieldName, file);
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     body: fd,
     headers: authHeaders(token),
+    signal,
   });
   if (!res.ok) {
     const msg = await extractError(res);
@@ -22,11 +24,13 @@ async function postFile(path, file, fieldName = "file", token) {
   return res.json();
 }
 
-async function postJson(path, body, token) {
+async function postJson(path, body, token, opts = {}) {
+  const { signal } = opts;
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify(body || {}),
+    signal,
   });
   if (!res.ok) {
     const msg = await extractError(res);
@@ -35,11 +39,13 @@ async function postJson(path, body, token) {
   return res.json();
 }
 
-async function patchJson(path, body, token) {
+async function patchJson(path, body, token, opts = {}) {
+  const { signal } = opts;
   const res = await fetch(`${API_BASE}${path}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify(body || {}),
+    signal,
   });
   if (!res.ok) {
     const msg = await extractError(res);
@@ -48,8 +54,12 @@ async function patchJson(path, body, token) {
   return res.json();
 }
 
-async function getJson(path, token) {
-  const res = await fetch(`${API_BASE}${path}`, { headers: authHeaders(token) });
+async function getJson(path, token, opts = {}) {
+  const { signal } = opts;
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: authHeaders(token),
+    signal,
+  });
   if (!res.ok) {
     const msg = await extractError(res);
     throw new Error(msg);
@@ -57,10 +67,12 @@ async function getJson(path, token) {
   return res.json();
 }
 
-async function del(path, token) {
+async function del(path, token, opts = {}) {
+  const { signal } = opts;
   const res = await fetch(`${API_BASE}${path}`, {
     method: "DELETE",
     headers: authHeaders(token),
+    signal,
   });
   if (!res.ok) {
     const msg = await extractError(res);
@@ -86,14 +98,15 @@ export const api = {
   // health
   health: () => getJson("/health"),
   // parsers
-  parseCV: (file) => postFile("/cv/parse", file),
-  parseJD: (file) => postFile("/jd/parse", file),
+  parseCV: (file, opts) => postFile("/cv/parse", file, "file", undefined, opts),
+  parseJD: (file, opts) => postFile("/jd/parse", file, "file", undefined, opts),
   // match
-  match: (cv, jd, weights) => postJson("/match", { cv, jd, weights }),
-  matchBulk: (cvs, jd, weights) =>
-    postJson("/match/bulk", { cvs, jd, weights }),
+  match: (cv, jd, weights, opts) =>
+    postJson("/match", { cv, jd, weights }, undefined, opts),
+  matchBulk: (cvs, jd, weights, opts) =>
+    postJson("/match/bulk", { cvs, jd, weights }, undefined, opts),
   // test gen
-  genQuestions: (jd) => postJson("/tests/generate", { jd }),
+  genQuestions: (jd, opts) => postJson("/tests/generate", { jd }, undefined, opts),
   // history & summary
   history: (limit = 50, kind) =>
     getJson(`/history?limit=${encodeURIComponent(limit)}${kind ? `&kind=${encodeURIComponent(kind)}` : ""}`),

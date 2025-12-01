@@ -9,12 +9,14 @@ export default function UploadBox({
   maxFiles,
   accept,
   helper,
+  disabled = false,
 }) {
   const ref = useRef();
   const [name, setName] = useState("");
   const [dragging, setDragging] = useState(false);
 
   function handleFiles(fileList) {
+    if (disabled) return;
     const files = Array.from(fileList || []).filter(Boolean);
     if (!files.length) return;
 
@@ -37,32 +39,37 @@ export default function UploadBox({
   }
 
   function change(e) {
+    if (disabled) return;
     handleFiles(e.target.files);
   }
 
   function onDragOver(e) {
     e.preventDefault();
+    if (disabled) return;
     setDragging(true);
   }
   function onDragLeave(e) {
     e.preventDefault();
+    if (disabled) return;
     setDragging(false);
   }
   function onDrop(e) {
     e.preventDefault();
+    if (disabled) return;
     setDragging(false);
     handleFiles(e.dataTransfer?.files);
   }
 
   return (
     <div
-      className={`uploadbox ${dragging ? "dragging" : ""}`}
+      className={`uploadbox ${dragging ? "dragging" : ""} ${disabled ? "disabled" : ""}`}
       onDragOver={onDragOver}
       onDragEnter={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      onClick={() => ref.current?.click()}
+      onClick={() => !disabled && ref.current?.click()}
       role="button"
+      aria-disabled={disabled}
     >
       <div className="card-body text-center">
         <svg
@@ -82,7 +89,7 @@ export default function UploadBox({
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            ref.current?.click();
+            if (!disabled) ref.current?.click();
           }}
         >
           Browse files
@@ -100,6 +107,7 @@ export default function UploadBox({
           hidden
           multiple={multiple}
           accept={accept}
+          disabled={disabled}
         />
       </div>
     </div>
