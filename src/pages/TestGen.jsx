@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import UploadBox from "../components/UploadBox.jsx";
 import { api } from "../services/api.js";
+import { parseCache } from "../services/parseCache.js";
 
 export default function TestGen({
   onStoreHistory,
@@ -26,6 +27,17 @@ export default function TestGen({
     setErr("");
     setQuestions([]);
     setJd(null);
+    const cached = parseCache.get("jd", file);
+    const reuse =
+      !!cached &&
+      typeof window !== "undefined" &&
+      window.confirm("Reutiliser l'analyse precedente pour ce JD ? OK = reutiliser, Annuler = reanalyser.");
+    if (reuse) {
+      const jdJson = cached.payload?.jd ?? cached.payload;
+      setJd(jdJson);
+      setJdLoading(false);
+      return;
+    }
     setJdLoading(true);
     const controller = onJobStart?.({
       key: "testgen",
@@ -35,6 +47,7 @@ export default function TestGen({
     });
     try {
       const { jd: jdJson } = await api.parseJD(file, { signal: controller?.signal });
+      parseCache.set("jd", file, { jd: jdJson });
       setJd(jdJson);
       onJobUpdate?.({
         status: "running",

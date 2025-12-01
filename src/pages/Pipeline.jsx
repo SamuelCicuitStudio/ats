@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import UploadBox from "../components/UploadBox.jsx";
 import { api } from "../services/api.js";
+import { parseCache } from "../services/parseCache.js";
 
 export default function Pipeline({
   onStoreHistory,
@@ -101,7 +102,18 @@ export default function Pipeline({
       progress: { done: 0, total: totalSteps, message: "Analyse du JD..." },
     });
     try {
-      const { jd: jdJson } = await api.parseJD(jdFile, { signal: controller?.signal });
+      const cachedJd = parseCache.get("jd", jdFile);
+      const reuseJd =
+        !!cachedJd &&
+        typeof window !== "undefined" &&
+        window.confirm("Reutiliser l'analyse precedente pour ce JD ? OK = reutiliser, Annuler = reanalyser.");
+
+      const jdJson = reuseJd
+        ? cachedJd.payload?.jd ?? cachedJd.payload
+        : (await api.parseJD(jdFile, { signal: controller?.signal })).jd;
+
+      if (!reuseJd) parseCache.set("jd", jdFile, { jd: jdJson });
+
       setJd(jdJson);
       setJdLoading(false);
       onJobUpdate?.({
@@ -122,7 +134,17 @@ export default function Pipeline({
             message: `Analyse du CV ${i + 1} sur ${cvFiles.length}`,
           },
         });
-        const { cv: cvJson } = await api.parseCV(cvFiles[i], { signal: controller?.signal });
+        const cachedCv = parseCache.get("cv", cvFiles[i]);
+        const reuseCv =
+          !!cachedCv &&
+          typeof window !== "undefined" &&
+          window.confirm(
+            `Reutiliser l'analyse precedente pour ${cvFiles[i].name || "ce CV"} ? OK = reutiliser, Annuler = reanalyser.`
+          );
+        const cvJson = reuseCv
+          ? cachedCv.payload?.cv ?? cachedCv.payload
+          : (await api.parseCV(cvFiles[i], { signal: controller?.signal })).cv;
+        if (!reuseCv) parseCache.set("cv", cvFiles[i], { cv: cvJson });
         parsed.push({ file: cvFiles[i], cv: cvJson });
         setCvProgress({ done: i + 1, total: cvFiles.length });
       }
