@@ -22,7 +22,7 @@ export default function History({ items: provided }) {
     };
   }, [provided]);
 
-  if (!items || items.length === 0) return <div>No history yet.</div>;
+  if (!items || items.length === 0) return <div>Aucun historique pour le moment.</div>;
 
   return (
     <div className="history list-group list-group-flush">
@@ -60,7 +60,7 @@ export default function History({ items: provided }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Download
+                Télécharger
               </a>
             </div>
           )}

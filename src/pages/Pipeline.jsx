@@ -33,11 +33,12 @@ export default function Pipeline({ onStoreHistory }) {
     const capped = list.slice(0, MAX_CV_FILES);
     if (originalCount > MAX_CV_FILES) {
       setInfo(
-        `You selected ${originalCount} CVs; only the first ${MAX_CV_FILES} will be processed.`
+        `Vous avez sélectionné ${originalCount} CVs ; seuls les ${MAX_CV_FILES} premiers seront traités.`
       );
     }
     setCvFiles(capped);
   }
+
   function handleJD(file) {
     setErr("");
     setResults([]);
@@ -58,7 +59,7 @@ export default function Pipeline({ onStoreHistory }) {
   async function doMatch() {
     if (!cvFiles.length || !jdFile) {
       setErr(
-        "Upload one JD and at least one CV (up to 100) before running matching."
+        "Merci de charger un JD et au moins un CV (jusqu'à 100) avant de lancer le matching."
       );
       return;
     }
@@ -162,7 +163,7 @@ export default function Pipeline({ onStoreHistory }) {
             </div>
             Matching
           </div>
-          </div>
+        </div>
       </div>
 
       <div className="section">
@@ -175,7 +176,7 @@ export default function Pipeline({ onStoreHistory }) {
               multiple
               maxFiles={MAX_CV_FILES}
               accept=".pdf,.docx,.txt"
-              helper="Limit 200MB per file – PDF, DOCX, TXT"
+              helper="Limite 200 Mo par fichier - PDF, DOCX, TXT"
             />
           </div>
           <div className="drop">
@@ -183,14 +184,14 @@ export default function Pipeline({ onStoreHistory }) {
               label="Selectionnez la description de poste"
               onFile={handleJD}
               accept=".pdf,.docx,.txt"
-              helper="Limit 200MB per file – PDF, DOCX, TXT"
+              helper="Limite 200 Mo par fichier - PDF, DOCX, TXT"
             />
           </div>
         </div>
 
         {cvFiles.length > 0 && (
           <div className="text-muted small mt-2">
-            {cvFiles.length} CV file{cvFiles.length > 1 ? "s" : ""} selected (max {MAX_CV_FILES})
+            {cvFiles.length} CV sélectionné{cvFiles.length > 1 ? "s" : ""} (max {MAX_CV_FILES})
           </div>
         )}
         {cvFiles.length > 0 && (
@@ -201,22 +202,22 @@ export default function Pipeline({ onStoreHistory }) {
               </span>
             ))}
             {cvFiles.length > 6 && (
-              <span className="cv-chip more">+{cvFiles.length - 6} more</span>
+              <span className="cv-chip more">+{cvFiles.length - 6} autres</span>
             )}
           </div>
         )}
         {isParsingCvs && (
           <div className="muted small mt-2">
-            Parsing CVs... ({cvProgress.done}/{cvProgress.total})
+            Analyse des CV... ({cvProgress.done}/{cvProgress.total})
           </div>
         )}
         {cvProgress.total > 0 && !isParsingCvs && cvProgress.done === cvProgress.total && (
           <div className="text-success small mt-2">
-            Parsed {cvProgress.total} CV{cvProgress.total > 1 ? "s" : ""}
+            Analysé {cvProgress.total} CV{cvProgress.total > 1 ? "s" : ""}
           </div>
         )}
-        {jdLoading && <div className="muted small mt-2">Parsing JD...</div>}
-        {jd && !jdLoading && <div className="text-success small mt-2">JD parsed</div>}
+        {jdLoading && <div className="muted small mt-2">Analyse du JD...</div>}
+        {jd && !jdLoading && <div className="text-success small mt-2">JD analysé</div>}
         {info && <div className="alert alert-info mt-3 mb-0 py-2">{info}</div>}
         {err && <div className="alert alert-danger mt-3 mb-0 py-2">{err}</div>}
 
@@ -230,23 +231,23 @@ export default function Pipeline({ onStoreHistory }) {
             disabled={matchLoading || jdLoading || isParsingCvs || !cvFiles.length || !jdFile}
             type="button"
           >
-            {matchLoading ? "Matching..." : "Suivant Parsing"}
+            {matchLoading ? "Matching..." : "Lancer le matching"}
           </button>
         </div>
       </div>
 
       {results.length > 0 && (
         <div className="section">
-          <h3>Resultats de Matching</h3>
+          <h3>Résultats du matching</h3>
           <div className="table-responsive">
             <table className="table align-middle my-3">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>CV File</th>
-                  <th>Candidate</th>
+                  <th>Fichier CV</th>
+                  <th>Candidat</th>
                   <th>Global</th>
-                  <th>Breakdown</th>
+                  <th>Détail</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,10 +257,10 @@ export default function Pipeline({ onStoreHistory }) {
                     <td>{row.fileName}</td>
                     <td>
                       <div className="fw-semibold">
-                        {row.result?.candidate_name || "Unknown"}
+                        {row.result?.candidate_name || "Inconnu"}
                       </div>
                       <div className="muted small">
-                        {row.result?.cv_title || "No title"}
+                        {row.result?.cv_title || "Sans titre"}
                       </div>
                     </td>
                     <td>

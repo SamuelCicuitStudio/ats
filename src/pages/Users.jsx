@@ -128,7 +128,7 @@ export default function Users({ session, onUserUpdate }) {
   }
 
   async function removeUser(username) {
-    if (!window.confirm(`Delete user "${username}"?`)) return;
+    if (!window.confirm(`Supprimer l'utilisateur "${username}" ?`)) return;
     setErr("");
     setBusy(true);
     try {
@@ -145,30 +145,30 @@ export default function Users({ session, onUserUpdate }) {
     <div className="panel card bg-panel border-soft shadow-1 p-4">
       <div className="card bg-dark-subtle border-0 mb-4">
         <div className="card-body">
-          <h3 className="h5 mb-3">Your account</h3>
+          <h3 className="h5 mb-3">Mon compte</h3>
           <form className="row g-3" onSubmit={saveSelf}>
             <div className="col-12 col-md-6">
-              <label className="form-label">Display name</label>
+              <label className="form-label">Nom affiché</label>
               <input
                 className="form-control"
                 value={selfName}
                 onChange={(e) => setSelfName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Votre nom"
               />
             </div>
             <div className="col-12 col-md-6">
-              <label className="form-label">New password</label>
+              <label className="form-label">Nouveau mot de passe</label>
               <input
                 className="form-control"
                 type="password"
                 value={selfPwd}
                 onChange={(e) => setSelfPwd(e.target.value)}
-                placeholder="Set new password"
+                placeholder="Définir un nouveau mot de passe"
               />
             </div>
             <div className="col-12">
               <button className="btn btn-primary" type="submit" disabled={busy}>
-                Save account
+                Enregistrer
               </button>
             </div>
           </form>
@@ -178,23 +178,23 @@ export default function Users({ session, onUserUpdate }) {
       {isAdmin && (
         <div className="card users-admin-card border-0">
           <div className="card-body">
-            <h3 className="h5 mb-3">Users</h3>
+            <h3 className="h5 mb-3">Utilisateurs</h3>
 
             <form className="row g-3" onSubmit={addUser}>
               <div className="col-12 col-md-3">
-                <label className="form-label">Username</label>
+                <label className="form-label">Identifiant</label>
                 <input
                   className="form-control"
                   value={newUser.username}
                   onChange={(e) =>
                     setNewUser((u) => ({ ...u, username: e.target.value }))
                   }
-                  placeholder="username"
+                  placeholder="identifiant"
                   required
                 />
               </div>
               <div className="col-12 col-md-3">
-                <label className="form-label">Password</label>
+                <label className="form-label">Mot de passe</label>
                 <input
                   className="form-control"
                   type="password"
@@ -202,23 +202,23 @@ export default function Users({ session, onUserUpdate }) {
                   onChange={(e) =>
                     setNewUser((u) => ({ ...u, password: e.target.value }))
                   }
-                  placeholder="Set a password"
+                  placeholder="Définir un mot de passe"
                   required
                 />
               </div>
               <div className="col-12 col-md-4">
-                <label className="form-label">Display name</label>
+                <label className="form-label">Nom affiché</label>
                 <input
                   className="form-control"
                   value={newUser.display_name}
                   onChange={(e) =>
                     setNewUser((u) => ({ ...u, display_name: e.target.value }))
                   }
-                  placeholder="Optional"
+                  placeholder="Optionnel"
                 />
               </div>
               <div className="col-12 col-md-3">
-                <label className="form-label">Roles</label>
+                <label className="form-label">Rôles</label>
                 <div className="users-role-group">
                   <div className="form-check">
                     <input
@@ -234,7 +234,7 @@ export default function Users({ session, onUserUpdate }) {
                       id="role-user"
                     />
                     <label className="form-check-label ms-1" htmlFor="role-user">
-                      user
+                      utilisateur
                     </label>
                   </div>
                   <div className="form-check">
@@ -262,7 +262,7 @@ export default function Users({ session, onUserUpdate }) {
                   type="submit"
                   disabled={busy}
                 >
-                  Add user
+                  Ajouter
                 </button>
               </div>
             </form>
@@ -271,8 +271,8 @@ export default function Users({ session, onUserUpdate }) {
               <table className="table users-table table-striped align-middle mb-0 w-100">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Roles / Password</th>
+                    <th>Utilisateur</th>
+                    <th>Rôles / Mot de passe</th>
                     <th className="text-end">Actions</th>
                   </tr>
                 </thead>
@@ -288,7 +288,7 @@ export default function Users({ session, onUserUpdate }) {
                       <tr key={u.username}>
                         <td className="users-cell">
                           <label className="form-label text-uppercase small fw-semibold">
-                            Username
+                            Identifiant
                           </label>
                           <input
                             className="form-control mb-3"
@@ -302,7 +302,7 @@ export default function Users({ session, onUserUpdate }) {
                             }
                           />
                           <label className="form-label text-uppercase small fw-semibold">
-                            Display name
+                            Nom affiché
                           </label>
                           <input
                             className="form-control"
@@ -314,12 +314,12 @@ export default function Users({ session, onUserUpdate }) {
                                 e.target.value
                               )
                             }
-                            placeholder="Display name"
+                            placeholder="Nom affiché"
                           />
                         </td>
                         <td className="users-cell">
                           <label className="form-label text-uppercase small fw-semibold">
-                            Roles
+                            Rôles
                           </label>
                           <div className="users-role-checkboxes mb-3">
                             {["user", "admin"].map((r) => (
@@ -340,7 +340,7 @@ export default function Users({ session, onUserUpdate }) {
                             ))}
                           </div>
                           <label className="form-label text-uppercase small fw-semibold">
-                            Reset password
+                            Réinitialiser le mot de passe
                           </label>
                           <input
                             className="form-control"
@@ -353,7 +353,7 @@ export default function Users({ session, onUserUpdate }) {
                                 e.target.value
                               )
                             }
-                            placeholder="New password"
+                            placeholder="Nouveau mot de passe"
                           />
                         </td>
                         <td className="users-cell text-end align-middle">
@@ -364,7 +364,7 @@ export default function Users({ session, onUserUpdate }) {
                               onClick={() => saveUser(u.username)}
                               disabled={busy}
                             >
-                              Save
+                              Enregistrer
                             </button>
                             <button
                               className="btn btn-danger"
@@ -372,7 +372,7 @@ export default function Users({ session, onUserUpdate }) {
                               onClick={() => removeUser(u.username)}
                               disabled={busy}
                             >
-                              Delete
+                              Supprimer
                             </button>
                           </div>
                         </td>

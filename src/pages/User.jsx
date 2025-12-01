@@ -37,7 +37,7 @@ export default function User({ user, onLogin, fullPage = false }) {
               className="login-input fadeIn second"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Username"
+              placeholder="Identifiant"
             />
             <input
               className="login-input fadeIn third"
@@ -51,7 +51,7 @@ export default function User({ user, onLogin, fullPage = false }) {
               type="submit"
               disabled={busy}
             >
-              {busy ? "Signing in..." : "Log In"}
+              {busy ? "Connexion..." : "Se connecter"}
             </button>
             {err && <div className="alert alert-danger mt-2">{err}</div>}
           </form>
@@ -68,19 +68,19 @@ export default function User({ user, onLogin, fullPage = false }) {
   return (
     <div className="panel card p-4" style={{ maxWidth: 520, width: "100%" }}>
       <div>
-        <h3 className="h5">User</h3>
+        <h3 className="h5">Utilisateur</h3>
         {user && (
           <div className="result card bg-white border-0 mt-3">
             <div className="card-body">
               <div>
-                <b>Username:</b> {user.username}
+                <b>Identifiant :</b> {user.username}
               </div>
               <div>
-                <b>Roles:</b> {(user.roles || []).join(", ")}
+                <b>Rôles :</b> {(user.roles || []).join(", ")}
               </div>
               {user.display_name && (
                 <div>
-                  <b>Name:</b> {user.display_name}
+                  <b>Nom :</b> {user.display_name}
                 </div>
               )}
             </div>
@@ -90,7 +90,7 @@ export default function User({ user, onLogin, fullPage = false }) {
 
       <form className="row g-3 mt-3" onSubmit={submit}>
         <div className="col-12">
-          <label className="form-label">Username</label>
+          <label className="form-label">Identifiant</label>
           <input
             className="form-control"
             value={username}
@@ -99,7 +99,7 @@ export default function User({ user, onLogin, fullPage = false }) {
           />
         </div>
         <div className="col-12">
-          <label className="form-label">Password</label>
+          <label className="form-label">Mot de passe</label>
           <input
             className="form-control"
             type="password"
@@ -110,7 +110,7 @@ export default function User({ user, onLogin, fullPage = false }) {
         </div>
         <div className="col-12">
           <button className="btn btn-primary" type="submit" disabled={busy}>
-            {busy ? "Signing in..." : "Sign in"}
+            {busy ? "Connexion..." : "Se connecter"}
           </button>
           {err && (
             <div className="alert alert-danger mt-3 mb-0 py-2">{err}</div>

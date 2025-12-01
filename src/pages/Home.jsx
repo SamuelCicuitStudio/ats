@@ -94,19 +94,19 @@ export default function Home() {
         {err && <div className="alert alert-danger mb-3">{err}</div>}
         <div className="cards" style={{ marginBottom: 18 }}>
           <article className="card">
-            <div className="name">CV parsés</div>
+              <div className="name">CV parsés</div>
             <div className="h4 mt-1">{counts.cv_parse || 0}</div>
           </article>
           <article className="card">
-            <div className="name">JD parsés</div>
+              <div className="name">JD parsés</div>
             <div className="h4 mt-1">{counts.jd_parse || 0}</div>
           </article>
           <article className="card">
-            <div className="name">Matchs</div>
+              <div className="name">Matchs</div>
             <div className="h4 mt-1">{(counts.match || 0) + (counts.match_bulk || 0)}</div>
           </article>
           <article className="card">
-            <div className="name">Tests générés</div>
+              <div className="name">Tests générés</div>
             <div className="h4 mt-1">{counts.test_generate || 0}</div>
           </article>
         </div>
@@ -205,7 +205,7 @@ export default function Home() {
                 ))}
               </div>
               <footer>
-                <a href="#">View Details →</a>
+                <a href="#">Voir le détail →</a>
               </footer>
             </article>
           ))}

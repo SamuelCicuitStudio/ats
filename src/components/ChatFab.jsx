@@ -113,7 +113,7 @@ export default function ChatFab() {
             <h5 className="mb-0">KPI Chat</h5>
             <div className="d-flex align-items-center gap-2">
               <label className="btn btn-sm btn-outline-secondary mb-0">
-                Upload PDF
+                Charger un PDF
                 <input
                   type="file"
                   accept="application/pdf"
@@ -148,7 +148,7 @@ export default function ChatFab() {
                     <p className="chat-time">{m.timestamp}</p>
                   )}
                 </div>
-                {m.role === "user" && <div className="chat-avatar user">You</div>}
+                {m.role === "user" && <div className="chat-avatar user">Vous</div>}
               </div>
             ))}
             {err && <div className="alert alert-danger mt-2">{err}</div>}
@@ -160,7 +160,7 @@ export default function ChatFab() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={
-                session ? "Type message..." : "Upload a PDF first"
+                session ? "Tapez votre message..." : "Chargez d’abord un PDF"
               }
               disabled={!session || busy}
             />

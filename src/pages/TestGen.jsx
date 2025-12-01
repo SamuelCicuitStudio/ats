@@ -27,7 +27,7 @@ export default function TestGen({ onStoreHistory }) {
 
   async function generate() {
     if (!jd) {
-      setErr("Upload a JD first.");
+      setErr("Merci de charger une fiche de poste (JD) avant de générer des questions.");
       return;
     }
     setErr("");
@@ -52,7 +52,7 @@ export default function TestGen({ onStoreHistory }) {
   return (
     <section className="canvas">
       <div className="header">
-        <h2>Generation de Tests</h2>
+        <h2>Génération de Tests</h2>
       </div>
       <div className="paper-wrap">
         <div className="paper">
@@ -61,12 +61,12 @@ export default function TestGen({ onStoreHistory }) {
               label="Selectionnez la JD"
               onFile={handleJD}
               accept=".pdf,.docx,.txt"
-              helper="Limit 200MB per file – PDF, DOCX, TXT"
+              helper="Limite 200MB par fichier – PDF, DOCX, TXT"
             />
-            {jdLoading && <div className="muted small">Parsing JD...</div>}
+            {jdLoading && <div className="muted small">Analyse du JD...</div>}
             {jd && !jdLoading && (
               <div className="text-success small">
-                JD chargee. Cliquez sur "Generate Questions" pour demarrer.
+                JD chargée. Cliquez sur "Générer les questions" pour démarrer.
               </div>
             )}
             <button
@@ -75,7 +75,7 @@ export default function TestGen({ onStoreHistory }) {
               disabled={jdLoading || generating || !jd}
               type="button"
             >
-              {generating ? "Generating..." : "Generate Questions"}
+              {generating ? "Génération..." : "Générer les questions"}
             </button>
             {err && <div className="alert alert-danger mb-0 py-2">{err}</div>}
           </div>
