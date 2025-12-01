@@ -1,16 +1,15 @@
 # app/services/test_generator.py
 """
-Technical Test Generator
-- Input: JD JSON (normalized by your JD Parser)
-- Seeds: use jd["skills"]; if empty, fall back to top terms from jd["jd_text"]
-- LLM: Ollama /api/generate with model from OLLAMA_MODEL_TEST (default 'mistral')
-- Output: list of 5..10 questions (each: {"question": "<string>"})
-- Persist: /storage/questions/<uuid>.json (atomic write)
-- Deterministic: temperature 0.0, top_p 1.0
+Technical Test / Questionnaire Generator (frontend-compatible)
 
-Env:
-  OLLAMA_BASE_URL (default http://localhost:11434)
-  OLLAMA_MODEL_TEST (default mistral)
+This service now mirrors the reference "questionnaire_generator (1).py":
+- Same model source (OLLAMA_MODEL), same French prompt, same JSON output format
+- Generates ~20 short, technical interview questions and includes both QCM and open questions
+- Returns a JSON array of {"question": "..."} objects
+
+Frontend contract preserved:
+- Public API: generate_questions(jd: dict) -> {"questions": [...], "storage_path": "...", "id": "..."}
+- Persists payload via app.utils.storage_utils.persist_questions when available, else local atomic write
 """
 
 from __future__ import annotations
@@ -20,10 +19,9 @@ import re
 import json
 import uuid
 import tempfile
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
-import requests
-
+import ollama  # switched to match reference impl (ollama.chat)
 # Try storage utils (preferred); we also ship a safe local fallback if import fails.
 try:
     from app.utils.storage_utils import persist_questions  # type: ignore
@@ -32,12 +30,15 @@ except Exception:
     persist_questions = None  # type: ignore
     _HAS_STORAGE_UTILS = False
 
-# --------- Config / constants ----------
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-OLLAMA_MODEL_TEST = os.getenv("OLLAMA_MODEL_TEST", "mistral")
-OLLAMA_MAX_TOKENS = int(os.getenv("OLLAMA_MAX_TOKENS", "3000"))
+# ------------------------------- Config ---------------------------------------
+# Match the reference: use OLLAMA_MODEL (from config if available), not a TEST-specific model.
+try:
+    # If your project defines OLLAMA_MODEL in config.config (like the reference)
+    from config.config import OLLAMA_MODEL  # type: ignore
+except Exception:
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi3:latest")
 
-# Minimal EN/FR stopword set (enough for JD keyword fallback, no extra deps)
+# Minimal EN/FR stopword set (for JD keyword fallback)
 _STOPWORDS = {
     # english
     "a","an","and","the","or","of","for","with","in","to","on","by","at","from","as","is","are","be","being","been",
@@ -54,7 +55,22 @@ _STOPWORDS = {
 _TOKEN_RE = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9]+", re.UNICODE)
 
 
-# -------------------- small helpers --------------------
+# ------------------------------- Prompt ---------------------------------------
+# Copied (semantics preserved) from questionnaire_generator (1).py
+PROMPT_TEMPLATE = """
+Tu es un expert en recrutement technique.
+Génère entre 20 questions d’entretien (courtes et techniques) dois inclure des qcm et des questions ouvertes
+à partir des compétences suivantes : {skills}.
+Le résultat doit être un tableau JSON, avec le format suivant :
+
+[
+  {{ "question": "..." }},
+  {{ "question": "..." }}
+]
+""".strip()
+
+
+# ---------------------------- tiny helpers ------------------------------------
 def _normspace(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "")).strip()
 
@@ -87,10 +103,11 @@ def _dedup_lower_keep_order(items: List[str]) -> List[str]:
     return out
 
 
-def _extract_seed_skills(jd: Dict[str, Any], k: int = 10) -> List[str]:
+def _extract_seed_skills(jd: Dict[str, Any], k: int = 20) -> List[str]:
     """
-    Primary: jd['skills'] (already normalized by JD parser).
-    Fallback: simple term-frequency on jd['jd_text'] with stopwords removed (no sklearn dependency).
+    Primary: jd['skills'] / jd['competences'] if provided by the JD parser.
+    Fallback: simple term-frequency on jd['jd_text'] with stopwords removed.
+    Behavior mirrors the reference's intent to derive skills when not provided.
     """
     skills = jd.get("skills") or jd.get("competences") or []
     if isinstance(skills, list) and skills:
@@ -100,7 +117,6 @@ def _extract_seed_skills(jd: Dict[str, Any], k: int = 10) -> List[str]:
     if not text:
         return []
 
-    # crude token freq (single-document "tf-idf" ~ tf)
     freqs: Dict[str, int] = {}
     for tok in _TOKEN_RE.findall(text):
         t = tok.lower()
@@ -110,80 +126,79 @@ def _extract_seed_skills(jd: Dict[str, Any], k: int = 10) -> List[str]:
 
     if not freqs:
         return []
-
-    # pick top-k by frequency, stable by token name as tie-breaker
     ranked = sorted(freqs.items(), key=lambda kv: (-kv[1], kv[0]))
     return [w for (w, _) in ranked[:k]]
 
 
-def _ollama_generate_questions(role_title: str, company: str, seed_skills: List[str]) -> List[Dict[str, str]]:
-    system = (
-        "You generate concise technical interview questions. "
-        'Return ONLY valid JSON: an array of 5 to 10 objects, each with a single key "question" (string). '
-        "No explanations, no commentary."
-    )
-    user = (
-        "Create targeted technical questions based on these skills and the role title.\n\n"
-        f"ROLE_TITLE: {role_title}\n"
-        f"COMPANY: {company}\n"
-        f'SKILLS_CANDIDATE_SHOULD_HAVE: {", ".join(seed_skills)}\n\n'
-        "Return JSON only, like:\n[\n  {\"question\": \"Your single question here.\"}\n]\n"
-    )
+# ---------------------- LLM call (matches reference) --------------------------
+def _ollama_generate_questions(skills: List[str]) -> List[Dict[str, str]]:
+    if not skills:
+        return []
 
-    payload = {
-        "model": OLLAMA_MODEL_TEST,
-        "system": system,
-        "prompt": user,
-        "format": "json",
-        "options": {"temperature": 0.0, "top_p": 1.0, "num_predict": OLLAMA_MAX_TOKENS},
-        "stream": False,
-    }
-
-    url = f"{OLLAMA_BASE_URL}/api/generate"
-    r = requests.post(url, json=payload, timeout=60)
-    r.raise_for_status()
-    text = (r.json().get("response") or "").strip()
-
-    def _parse_questions(s: str) -> List[Dict[str, str]]:
-        parsed = json.loads(s)
-        if not isinstance(parsed, list):
-            raise ValueError("LLM did not return a JSON array.")
-        out: List[Dict[str, str]] = []
-        for item in parsed:
-            if isinstance(item, dict) and "question" in item and isinstance(item["question"], str):
-                out.append({"question": item["question"]})
-        return out
+    prompt = PROMPT_TEMPLATE.format(skills=", ".join(skills))
 
     try:
-        return _parse_questions(text)
+        # Use ollama.chat like the reference; temp ~0.8
+        response = ollama.chat(
+            model=OLLAMA_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            options={"temperature": 0.8},
+        )
+        raw_output = (
+            (response.get("message") or {}).get("content")
+            if isinstance(response, dict) else ""
+        ) or ""
+    except Exception as e:
+        # Mirror reference behavior: fail softly
+        print(f"[!] Erreur Ollama : {e}")
+        return []
+
+    # Try to parse as JSON first
+    try:
+        data = json.loads(raw_output)
+        if isinstance(data, list):
+            # Normalize shape: keep only {"question": "<str>"}
+            normalized: List[Dict[str, str]] = []
+            for item in data:
+                if isinstance(item, dict) and "question" in item and isinstance(item["question"], str):
+                    normalized.append({"question": _normspace(item["question"])})
+            if normalized:
+                return normalized
     except Exception:
-        # Retry once with stricter reminder
-        payload["prompt"] = user + '\n\nReturn a VALID JSON array of objects with only the key "question".'
-        r2 = requests.post(url, json=payload, timeout=60)
-        r2.raise_for_status()
-        text2 = (r2.json().get("response") or "").strip()
-        return _parse_questions(text2)
+        pass
+
+    # Fallback compatible with reference (split lines)
+    questions = [
+        {"question": _normspace(q)}
+        for q in raw_output.split("\n")
+        if _normspace(q)
+    ]
+    return questions
 
 
 def _post_normalize(questions: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    # Trim, drop too short/long, dedupe
+    """
+    Light cleanup + dedupe. Keep up to 20 items (reference says 'entre 20').
+    Do NOT enforce the old 5..10 constraint to stay aligned with the reference.
+    """
     seen = set()
     cleaned: List[Dict[str, str]] = []
     for q in questions:
         s = _normspace(q.get("question", ""))
-        if 5 <= len(s) <= 200 and s.lower() not in seen:
+        if 5 <= len(s) <= 250 and s.lower() not in seen:
             seen.add(s.lower())
             cleaned.append({"question": s})
-    # Enforce 5..10 items
-    if len(cleaned) > 10:
-        cleaned = cleaned[:10]
+
+    # Aim for up to 20 questions as per the reference prompt
+    if len(cleaned) > 20:
+        cleaned = cleaned[:20]
     return cleaned
 
 
-# -------------------- public API --------------------
+# --------------------------- public API (unchanged) ----------------------------
 def generate_questions(jd: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Generate 5..10 concise questions from a JD JSON and persist to /storage/questions/<uuid>.json.
+    Generate ~20 concise questions from a JD JSON and persist them.
     Returns:
       {
         "questions": [...],
@@ -192,36 +207,29 @@ def generate_questions(jd: Dict[str, Any]) -> Dict[str, Any]:
       }
     """
     basics = (jd.get("job_profile") or {}).get("basics") or {}
-    role_title = _normspace(basics.get("title", ""))
-    company = _normspace(basics.get("company", ""))
+    # Role/company kept for possible future extensions; prompt currently uses skills only (like the reference).
+    _ = _normspace(basics.get("title", ""))
+    _ = _normspace(basics.get("company", ""))
 
-    seeds = _extract_seed_skills(jd, k=10)
-    questions = _ollama_generate_questions(role_title, company, seeds)
+    seed_skills = _extract_seed_skills(jd, k=20)
+    questions = _ollama_generate_questions(seed_skills)
     questions = _post_normalize(questions)
-
-    if len(questions) < 5:
-        raise ValueError("Generated fewer than 5 questions after normalization.")
 
     qid = str(uuid.uuid4())
     payload = {
         "id": qid,
-        "role_title": role_title,
-        "company": company,
-        "seed_skills": seeds,
+        "seed_skills": seed_skills,
         "questions": questions,
     }
 
-    # Preferred: use storage utils; Fallback: local atomic write
-    storage_path: str
+    # Persist via project utility if available; else local atomic write
     if _HAS_STORAGE_UTILS and callable(persist_questions):  # type: ignore
         try:
             info = persist_questions(qid, payload)  # expected to return {"path": "..."} (or similar)
-            # Support both {"path": "..."} and {"json_path": "..."} shapes
             storage_path = info.get("path") or info.get("json_path") or info.get("storage_path")  # type: ignore
             if not storage_path:
                 raise RuntimeError("persist_questions returned no path.")
         except Exception:
-            # fallback to local atomic write
             out_dir = os.path.abspath(os.path.join(os.getcwd(), "storage", "questions"))
             storage_path = os.path.join(out_dir, f"{qid}.json")
             _atomic_write_json(storage_path, payload)

@@ -1,6 +1,7 @@
 # backend/app/main.py
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from dotenv import load_dotenv, find_dotenv
@@ -27,6 +28,8 @@ if _env_path:
             load_dotenv(_env_path, override=False, encoding="utf-16")
 
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+# hard timeout (seconds) for long-running parser threads
+PARSER_TIMEOUT = float(os.getenv("PARSER_TIMEOUT_SECONDS", "60"))
 # admin bootstrap from env so creds live in .env
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").strip() or "admin"
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
@@ -151,7 +154,8 @@ async def cv_parse(file: UploadFile = File(...)):
     req_id = str(uuid.uuid4())
 
     try:
-        cv_json, raw_text = cv_parser.parse_cv(file.filename, raw, req_id=req_id)
+        # Pas de timeout explicite : on attend la reponse du parser
+        cv_json, raw_text = await asyncio.to_thread(cv_parser.parse_cv, file.filename, raw, req_id)
         eval_json = evaluator.evaluate(parsed_json=cv_json, raw_text=raw_text, kind="cv")
         storage_paths = persist_cv_artifacts(req_id, file.filename, raw, cv_json)
         return {
@@ -179,7 +183,8 @@ async def jd_parse(file: UploadFile = File(...)):
     req_id = str(uuid.uuid4())
 
     try:
-        jd_json, raw_text = jd_parser.parse_jd(file.filename, raw, req_id=req_id)
+        # Pas de timeout explicite : on attend la reponse du parser
+        jd_json, raw_text = await asyncio.to_thread(jd_parser.parse_jd, file.filename, raw, req_id)
         eval_json = evaluator.evaluate(parsed_json=jd_json, raw_text=raw_text, kind="jd")
         storage_paths = persist_jd_artifacts(req_id, file.filename, raw, jd_json)
         return {
@@ -209,6 +214,37 @@ def post_match(body: MatchBody):
         return {"result": result, "request_id": req_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Matching failed: {e}")
+
+
+class BulkMatchBody(BaseModel):
+    cvs: list[dict]
+    jd: dict
+    weights: dict | None = None
+
+
+@app.post("/match/bulk")
+def post_match_bulk(body: BulkMatchBody):
+    """
+    Match a single JD against multiple CVs in one call (hard-capped to 100 CVs).
+    """
+    cvs = body.cvs or []
+    if not cvs:
+        raise HTTPException(status_code=400, detail="At least one CV is required")
+    if len(cvs) > 100:
+        raise HTTPException(status_code=400, detail="Too many CVs; max allowed is 100")
+
+    req_id = str(uuid.uuid4())
+    results = []
+    for idx, cv in enumerate(cvs):
+        try:
+            match_res = matcher.match(cv, body.jd, weights=body.weights)
+            results.append({"index": idx, "result": match_res})
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Matching failed for CV #{idx + 1}: {e}"
+            )
+
+    return {"results": results, "count": len(results), "request_id": req_id}
 
 
 # ---------- TEST GENERATOR ----------

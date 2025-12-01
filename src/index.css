@@ -1,33 +1,10 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 
-:root {
-  --bg: #050609;
-  --bg-2: #0b0f17;
-  --panel: #12141c;
-  --panel-strong: #1b1f2a;
-  --border: rgba(255, 255, 255, 0.1);
-  --muted: #b6b2a8;
-  --text: #fdf8f2;
-  --accent: #fb923c;
-  --accent-strong: #f97316;
-  --shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
-  --table-border: rgba(255, 255, 255, 0.2);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body,
 html,
+body,
 #root {
   height: 100%;
   margin: 0;
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at 15% 20%, rgba(249, 115, 22, 0.2), transparent 35%),
-    radial-gradient(circle at 85% 5%, rgba(234, 88, 12, 0.15), transparent 40%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-  color: var(--text);
 }
 
 button {
@@ -37,42 +14,4 @@ button {
 input,
 button {
   font-family: inherit;
-}
-
-/* Bootstrap variable overrides */
-:root {
-  --bs-body-bg: var(--bg);
-  --bs-body-color: var(--text);
-  --bs-border-color: var(--border);
-
-  --bs-primary: var(--accent);
-  --bs-primary-rgb: 249, 115, 22;
-  --bs-secondary-color: var(--muted);
-
-  --bs-success: #16a34a;
-  --bs-info: #0ea5e9;
-  --bs-warning: #facc15;
-  --bs-danger: #ef4444;
-
-  --bs-link-color: var(--accent);
-}
-
-/* Utility helpers */
-.bg-panel {
-  background: var(--panel) !important;
-}
-.bg-panel-strong {
-  background: var(--panel-strong) !important;
-}
-.border-soft {
-  border: 1px solid var(--border) !important;
-}
-.rounded-md {
-  border-radius: 12px !important;
-}
-.rounded-lg {
-  border-radius: 16px !important;
-}
-.shadow-1 {
-  box-shadow: var(--shadow) !important;
 }

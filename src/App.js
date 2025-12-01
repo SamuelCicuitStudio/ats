@@ -1,6 +1,5 @@
 // src/App.js
 import React, { useState } from "react";
-import TabNav from "./components/TabNav";
 import ChatFab from "./components/ChatFab";
 
 import Pipeline from "./pages/Pipeline";
@@ -8,30 +7,51 @@ import TestGen from "./pages/TestGen";
 import History from "./pages/History";
 import User from "./pages/User";
 import Users from "./pages/Users";
+import Home from "./pages/Home";
 
 import "./index.css";
 import "./App.css";
 
+const StreamingPlaceholder = () => (
+  <section className="canvas">
+    <div className="header">
+      <h2>Streaming CV</h2>
+    </div>
+    <div className="section">
+      <p className="muted">A venir.</p>
+    </div>
+    <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
+  </section>
+);
+
+const HistoriquePlaceholder = ({ items }) => (
+  <section className="canvas">
+    <div className="header">
+      <h2>Historique</h2>
+    </div>
+    <div className="section">
+      {items?.length ? <History items={items} /> : <p className="muted">Historique des actions (placeholder).</p>}
+    </div>
+    <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
+  </section>
+);
+
 export default function App() {
-  const [tab, setTab] = useState("pipeline"); // 'pipeline' | 'tests' | 'history' | 'users'
+  const [tab, setTab] = useState("pipeline");
   const [history, setHistory] = useState([]);
-  const [session, setSession] = useState(null); // {token, user}
+  const [session, setSession] = useState(null);
 
   const user = session?.user;
-  const isAdmin = !!(user?.roles || []).includes("admin");
 
   const handleStoreHistory = (entry) => {
-    // entry shape is provided by children (Pipeline/TestGen)
     setHistory((prev) => [entry, ...prev].slice(0, 200));
   };
 
   const handleLogin = (loginResp) => {
-    // loginResp: {token, user}
     setSession(loginResp);
   };
 
   const handleUserUpdate = (updated) => {
-    // updated: partial or full user object
     setSession((prev) =>
       prev ? { ...prev, user: { ...prev.user, ...updated } } : prev
     );
@@ -48,80 +68,94 @@ export default function App() {
   }
 
   const navItems = [
-    { key: "pipeline", label: "Pipeline" },
-    { key: "tests", label: "Test Generation" },
-    { key: "history", label: "History" },
-    { key: "users", label: "Users" },
+    { key: "home", label: "Accueil" },
+    { key: "pipeline", label: "Pipeline de Recrutement" },
+    { key: "tests", label: "Generation de Tests" },
+    { key: "users", label: "Profil Utilisateur" },
+    { key: "streaming", label: "Streaming CV" },
+    { key: "historique", label: "Historique" },
   ];
+
+  const renderScreen = () => {
+    switch (tab) {
+      case "home":
+        return <Home />;
+      case "pipeline":
+        return <Pipeline onStoreHistory={handleStoreHistory} />;
+      case "tests":
+        return <TestGen onStoreHistory={handleStoreHistory} />;
+      case "users":
+        return (
+          <section className="canvas">
+            <div className="header">
+              <h2>Profil Utilisateur</h2>
+            </div>
+            <div className="section">
+              <Users session={session} onUserUpdate={handleUserUpdate} />
+            </div>
+            <div className="footer">(c) 2025 ATS Platform. Tous droits reserves.</div>
+          </section>
+        );
+      case "streaming":
+        return <StreamingPlaceholder />;
+      case "historique":
+        return <HistoriquePlaceholder items={history} />;
+      default:
+        return <Home />;
+    }
+  };
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <svg
-          className="topbar-icon"
-          viewBox="0 0 64 40"
-          role="img"
-          aria-label="ATS visual icon"
-        >
-          <rect x="2" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent)" strokeWidth="2" />
-          <rect x="40" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent-strong)" strokeWidth="2" />
-          <path
-            d="M32 8c7.18 0 13 5.82 13 13s-5.82 13-13 13-13-5.82-13-13 5.82-13 13-13zm0 6.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0-4l1.2 2.8 3-.4-1.8 2.4 1.8 2.4-3-.4-1.2 2.8-1.2-2.8-3 .4 1.8-2.4-1.8-2.4 3 .4 1.2-2.8z"
-            fill="url(#topbarGearGrad)"
-          />
-          <defs>
-            <linearGradient id="topbarGearGrad" x1="19" y1="8" x2="45" y2="34" gradientUnits="userSpaceOnUse">
-              <stop stopColor="var(--accent)" />
-              <stop offset="1" stopColor="var(--accent-strong)" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <div className="user-menu">
-          <button
-            className="user-badge"
-            title="Open menu"
-            type="button"
-          >
-            <span className="user-circle">
-              {(user.display_name || user.username || "?").charAt(0).toUpperCase()}
-            </span>
-            <div className="user-meta">
-              <div className="user-name">{user.display_name || user.username}</div>
-              <div className="user-role">{(user.roles || []).join(", ")}</div>
-            </div>
-          </button>
-          <div className="user-menu-dropdown">
-            <button
-              type="button"
-              className="dropdown-item"
-              onClick={() => setSession(null)}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="dot" aria-hidden="true"></div>
+          <h1>ATS Platform</h1>
+        </div>
+        <nav className="nav" id="side-nav">
+          {navItems.map((item) => (
+            <a
+              key={item.key}
+              href="#"
+              data-screen={item.key}
+              className={tab === item.key ? "active" : ""}
+              onClick={(e) => {
+                e.preventDefault();
+                setTab(item.key);
+              }}
             >
-              Disconnect
-            </button>
-          </div>
+              <span className="bar" aria-hidden="true"></span>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </aside>
+
+      <header className="topbar">
+        <div className="title">ATS Platform</div>
+        <div className="actions">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              setTab("users");
+            }}
+          >
+            Profil
+          </a>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              setSession(null);
+            }}
+          >
+            Deconnexion
+          </a>
         </div>
       </header>
 
-      <div className="layout container-xl py-4 d-flex flex-column flex-lg-row gap-4 align-items-start justify-content-center">
-        <aside className="sidebar">
-          <TabNav active={tab} onChange={(t) => setTab(t)} items={navItems} />
-        </aside>
-
-        <main className="content flex-grow-1 d-flex justify-content-center">
-          <div className="content-inner w-100">
-            {tab === "pipeline" && (
-              <Pipeline onStoreHistory={handleStoreHistory} />
-            )}
-            {tab === "tests" && (
-              <TestGen onStoreHistory={handleStoreHistory} />
-            )}
-            {tab === "history" && <History items={history} />}
-            {tab === "users" && (
-              <Users session={session} onUserUpdate={handleUserUpdate} />
-            )}
-          </div>
-        </main>
-      </div>
+      <main className="content">{renderScreen()}</main>
 
       <ChatFab />
     </div>

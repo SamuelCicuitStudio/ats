@@ -23,53 +23,43 @@ export default function User({ user, onLogin, fullPage = false }) {
 
   if (fullPage) {
     return (
-      <div className="login-panel fadeInDown">
-        <svg
-          className="topbar-icon fadeIn first"
-          viewBox="0 0 64 40"
-          role="img"
-          aria-label="ATS visual icon"
-        >
-          <rect x="2" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent)" strokeWidth="2" />
-          <rect x="40" y="6" width="22" height="28" rx="4" fill="var(--panel)" stroke="var(--accent-strong)" strokeWidth="2" />
-          <path
-            d="M32 8c7.18 0 13 5.82 13 13s-5.82 13-13 13-13-5.82-13-13 5.82-13 13-13zm0 6.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0-4l1.2 2.8 3-.4-1.8 2.4 1.8 2.4-3-.4-1.2 2.8-1.2-2.8-3 .4 1.8-2.4-1.8-2.4 3 .4 1.2-2.8z"
-            fill="url(#loginGearGrad)"
-          />
-          <defs>
-            <linearGradient id="loginGearGrad" x1="19" y1="8" x2="45" y2="34" gradientUnits="userSpaceOnUse">
-              <stop stopColor="var(--accent)" />
-              <stop offset="1" stopColor="var(--accent-strong)" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <form className="login-form" onSubmit={submit}>
-          <input
-            className="login-input fadeIn second"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-          />
-          <input
-            className="login-input fadeIn third"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-          />
-          <button
-          className="btn btn-primary login-button fadeIn fourth"
-          type="submit"
-          disabled={busy}
-        >
-            {busy ? "Signing in..." : "Log In"}
-          </button>
-          {err && <div className="alert alert-danger mt-2">{err}</div>}
-        </form>
-        <div className="login-footer">
-          <a className="underlineHover" href="#!">
-            Forgot password?
-          </a>
+      <div className="auth-wrapper">
+        <div className="auth-card fadeInDown">
+          <div className="brand">
+            <div className="dot" aria-hidden="true"></div>
+            <h1>ATS Platform</h1>
+          </div>
+          <div className="muted" style={{ marginBottom: 12 }}>
+            Connectez-vous pour continuer
+          </div>
+          <form className="login-form" onSubmit={submit}>
+            <input
+              className="login-input fadeIn second"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+            />
+            <input
+              className="login-input fadeIn third"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+            />
+            <button
+              className="btn primary login-button fadeIn fourth"
+              type="submit"
+              disabled={busy}
+            >
+              {busy ? "Signing in..." : "Log In"}
+            </button>
+            {err && <div className="alert alert-danger mt-2">{err}</div>}
+          </form>
+          <div className="login-footer">
+            <a className="underlineHover" href="#!" onClick={(e) => e.preventDefault()}>
+              Forgot password?
+            </a>
+          </div>
         </div>
       </div>
     );

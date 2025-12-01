@@ -90,6 +90,8 @@ export const api = {
   parseJD: (file) => postFile("/jd/parse", file),
   // match
   match: (cv, jd, weights) => postJson("/match", { cv, jd, weights }),
+  matchBulk: (cvs, jd, weights) =>
+    postJson("/match/bulk", { cvs, jd, weights }),
   // test gen
   genQuestions: (jd) => postJson("/tests/generate", { jd }),
   // kpi chat

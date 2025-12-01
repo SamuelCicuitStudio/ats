@@ -17,24 +17,36 @@ Constraints:
 
 from __future__ import annotations
 import os
+import re
 import json
 import uuid
 from typing import Dict, Any, List, Tuple
 
 import fitz  # PyMuPDF
-import requests
+from langchain_ollama.llms import OllamaLLM
 
 from app.utils.storage_utils import persist_kpi_pdf
 
 MAX_BYTES = 20 * 1024 * 1024  # 20 MB
-TRIM_CHARS = 12_000
+MAX_CONTEXT_CHARS = 6_000
+MAX_CHUNK_LEN = 1000  # mirror TestDatas/pdfExtractor chunking
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
-OPENROUTER_MODEL_KPI = os.getenv("OPENROUTER_MODEL_KPI", "deepseek/deepseek-chat:free")
-_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# Ollama-based KPI chat (phi3 by default)
+KPI_MODEL = os.getenv("KPI_MODEL", os.getenv("OLLAMA_MODEL_JD", "phi3:latest"))
+KPI_BASE_URL = os.getenv("KPI_BASE_URL", os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+KPI_TIMEOUT = float(os.getenv("KPI_TIMEOUT", "45"))
+KPI_NUM_PREDICT = int(os.getenv("KPI_NUM_PREDICT", "512"))
+
+KPI_LLM = OllamaLLM(
+    model=KPI_MODEL,
+    base_url=KPI_BASE_URL,
+    temperature=0.1,
+    num_predict=KPI_NUM_PREDICT,
+    client_kwargs={"timeout": KPI_TIMEOUT},
+)
 
 # In-memory session store:
-# { session_id: {"text": str, "history": [(q,a),...], "pages": int, "path": str, "bytes": int} }
+# { session_id: {"chunks": [str], "history": [(q,a),...], "pages": int, "path": str, "bytes": int} }
 _SESSIONS: Dict[str, Dict[str, Any]] = {}
 
 
@@ -53,6 +65,50 @@ def _extract_pdf_text(pdf_bytes: bytes) -> Tuple[str, int]:
     return text, pages
 
 
+def _chunk_text(text: str, max_len: int = MAX_CHUNK_LEN) -> List[str]:
+    """
+    Chunk text similarly to the reference pdfExtractor/upload.py:
+    - normalize whitespace
+    - split on sentence boundaries
+    - accumulate chunks under max_len
+    """
+    normalized = re.sub(r"\s+", " ", text or "").strip()
+    if not normalized:
+        return []
+    sentences = re.split(r"(?<=[.!?]) +", normalized)
+    chunks: List[str] = []
+    current = ""
+    for sentence in sentences:
+        if len(current) + len(sentence) + 1 < max_len:
+            current = (current + " " + sentence).strip()
+        else:
+            if current:
+                chunks.append(current.strip())
+            current = sentence.strip()
+    if current:
+        chunks.append(current.strip())
+    return chunks
+
+
+def _select_relevant_chunks(chunks: List[str], question: str, limit: int = 5) -> List[str]:
+    """
+    Very light heuristic relevance scoring using keyword overlap.
+    """
+    if not chunks:
+        return []
+    q_tokens = {tok for tok in re.findall(r"\w+", (question or "").lower()) if len(tok) > 2}
+    scored = []
+    for idx, ch in enumerate(chunks):
+        ch_l = ch.lower()
+        score = sum(1 for tok in q_tokens if tok in ch_l)
+        scored.append((score, idx, ch))
+    scored.sort(reverse=True)
+    top = [ch for score, _, ch in scored if score > 0][:limit]
+    if not top:
+        top = chunks[: min(limit, len(chunks))]
+    return top
+
+
 # -------- Public API --------
 def load_pdf_and_create_session(filename: str, file_bytes: bytes) -> Dict[str, Any]:
     # Basic checks
@@ -66,16 +122,16 @@ def load_pdf_and_create_session(filename: str, file_bytes: bytes) -> Dict[str, A
 
     # Persist the PDF via centralized storage utils
     # -> writes /kpi/<sid>.pdf and returns {"path": "..."}
-    persisted = persist_kpi_pdf(session_id=sid, filename=filename, raw_bytes=file_bytes)
+    persisted = persist_kpi_pdf(session_id=sid, filename=filename, file_bytes=file_bytes)
     out_path = persisted["path"]
 
-    # Extract & trim
+    # Extract & chunk
     full_text, pages = _extract_pdf_text(file_bytes)
-    trimmed = (full_text[:TRIM_CHARS]).strip()
+    chunks = _chunk_text(full_text)
 
     # Cache session context
     _SESSIONS[sid] = {
-        "text": trimmed,
+        "chunks": chunks,
         "history": [],          # list[(q, a)]
         "pages": pages,
         "path": out_path,
@@ -151,11 +207,51 @@ def ask_question(session_id: str, question: str) -> str:
     if not sess:
         raise KeyError("Unknown session_id.")
 
-    context_text: str = sess["text"]
+    def _is_job_related(q: str) -> bool:
+        ql = (q or "").lower()
+        keywords = [
+            "job",
+            "role",
+            "position",
+            "poste",
+            "offre",
+            "jd",
+            "job description",
+            "candidate",
+            "cv",
+            "resume",
+            "hiring",
+            "recruit",
+            "salary",
+            "compensation",
+        ]
+        return any(k in ql for k in keywords)
+
+    # For job-related questions, guide user to upload a file instead of answering.
+    if _is_job_related(question):
+        return (
+            "Pour les questions liées aux offres ou postes, merci d'uploader le document "
+            "via /kpi/load (PDF requis) avant de poser votre question."
+        )
+
+    chunks: List[str] = sess.get("chunks") or []
     history: List[Tuple[str, str]] = sess["history"]
 
-    messages = _build_messages(context_text, history, question)
-    answer = _openrouter_chat(messages).strip()
+    selected = _select_relevant_chunks(chunks, question, limit=5)
+    context_blob = "\n\n".join(selected)
+    if len(context_blob) > MAX_CONTEXT_CHARS:
+        context_blob = context_blob[:MAX_CONTEXT_CHARS]
+
+    prompt = (
+        "You are an HR analytics assistant. Answer strictly from the uploaded document context below. "
+        "If the answer is not present, reply: \"I can't find that in the report.\" "
+        "\n\n[CONTEXT]\n"
+        f"{context_blob}\n\n"
+        "[QUESTION]\n"
+        f"{question}\n"
+    )
+
+    answer = KPI_LLM.invoke(prompt).strip()
 
     # Update history (limit to last 3 pairs)
     history.append((question.strip(), answer))

@@ -1,20 +1,43 @@
 // src/components/UploadBox.jsx
 import React, { useRef, useState } from "react";
 
-export default function UploadBox({ label, onFile }) {
+export default function UploadBox({
+  label,
+  onFile,
+  onFiles,
+  multiple = false,
+  maxFiles,
+  accept,
+  helper,
+}) {
   const ref = useRef();
   const [name, setName] = useState("");
   const [dragging, setDragging] = useState(false);
 
-  function handleFile(file) {
-    if (!file) return;
-    setName(file.name);
-    onFile && onFile(file);
+  function handleFiles(fileList) {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (!files.length) return;
+
+    const originalCount = files.length;
+    const capped =
+      multiple && maxFiles ? files.slice(0, maxFiles) : files.slice(0);
+    const labelCount =
+      multiple && maxFiles ? Math.min(originalCount, maxFiles) : capped.length;
+    const labelStr =
+      labelCount > 1
+        ? `${labelCount} files selected`
+        : capped[0]?.name || "";
+
+    setName(labelStr);
+    if (multiple && onFiles) {
+      onFiles(capped, originalCount);
+    } else if (capped[0] && onFile) {
+      onFile(capped[0], originalCount);
+    }
   }
 
   function change(e) {
-    const f = e.target.files?.[0];
-    handleFile(f);
+    handleFiles(e.target.files);
   }
 
   function onDragOver(e) {
@@ -28,15 +51,12 @@ export default function UploadBox({ label, onFile }) {
   function onDrop(e) {
     e.preventDefault();
     setDragging(false);
-    const f = e.dataTransfer?.files?.[0];
-    handleFile(f);
+    handleFiles(e.dataTransfer?.files);
   }
 
   return (
     <div
-      className={`uploadbox card bg-panel border-soft shadow-1 ${
-        dragging ? "dragging" : ""
-      }`}
+      className={`uploadbox ${dragging ? "dragging" : ""}`}
       onDragOver={onDragOver}
       onDragEnter={onDragOver}
       onDragLeave={onDragLeave}
@@ -45,17 +65,42 @@ export default function UploadBox({ label, onFile }) {
       role="button"
     >
       <div className="card-body text-center">
-        <div className="uplabel text-muted fw-semibold mb-1">{label}</div>
-        <div className="drophint small">
-          Drag & drop or{" "}
-          <span className="browse text-primary fw-bold">browse</span>
+        <svg
+          className="icon"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="M12 16V4" strokeLinecap="round" />
+          <path d="M7 9l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>{label}</div>
+        <a
+          className="btn"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            ref.current?.click();
+          }}
+        >
+          Browse files
+        </a>
+        <div className="muted" style={{ marginTop: 8 }}>
+          {helper || "Drag & drop or browse"}
         </div>
         {name && (
-          <div className="filename mt-2 text-secondary small">
-            Selected: {name}
-          </div>
+          <div className="filename mt-2 text-secondary small">Selected: {name}</div>
         )}
-        <input ref={ref} type="file" onChange={change} hidden />
+        <input
+          ref={ref}
+          type="file"
+          onChange={change}
+          hidden
+          multiple={multiple}
+          accept={accept}
+        />
       </div>
     </div>
   );
